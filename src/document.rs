@@ -4,6 +4,8 @@ use std::old_io::{File};
 use wavefront_obj::obj::*;
 use xml;
 
+use {BindDataSet, BindData, VertexWeight, JointIndex};
+
 macro_rules! try_some {
     ($e:expr) => (match $e { Some(s) => s, None => return None })
 }
@@ -17,7 +19,7 @@ impl ColladaDocument {
     ///
     /// Construct a ColladaDocument for the XML document at the given path
     ///
-    pub fn from_file(path: &Path) -> Result<ColladaDocument, &'static str> {
+    pub fn from_path(path: &Path) -> Result<ColladaDocument, &'static str> {
         let file_result = File::open(path);
 
         let mut file = match file_result {
@@ -39,15 +41,62 @@ impl ColladaDocument {
     ///
     /// Populate and return an ObjSet for the meshes in the Collada document
     ///
-    pub fn get_obj_set(&self) -> Option<ObjSet>  {
+    pub fn get_obj_set(&self) -> Option<ObjSet> {
         let library_geometries = try_some!(self.root_element.get_child("library_geometries", self.get_ns()));
         let geometries = library_geometries.get_children("geometry", self.get_ns());
-        let objects = geometries.iter().filter_map( |g| { self.get_object(g) }).collect();
+        let objects = geometries.iter()
+            .filter_map( |g| { self.get_object(g) }).collect();
 
         Some(ObjSet{
             material_library: None,
             objects: objects,
         })
+    }
+
+    ///
+    /// Populate and return a BindDataSet from the Collada document
+    ///
+    pub fn get_bind_data_set(&self) -> Option<BindDataSet> {
+        let library_controllers = try_some!(self.root_element.get_child("library_controllers", self.get_ns()));
+        let controllers = library_controllers.get_children("controller", self.get_ns());
+        let bind_data = controllers.iter()
+            .filter_map( |c| { self.get_bind_data(c) }).collect();
+        Some(BindDataSet{ bind_data: bind_data })
+    }
+
+    fn get_bind_data(&self, controller_element: &xml::Element) -> Option<BindData> {
+
+        let skeleton_name = try_some!(controller_element.get_attribute("name", None));
+        let skin_element = try_some!(controller_element.get_child("skin", self.get_ns()));
+        let object_name = try_some!(skin_element.get_attribute("source", None)); // NOTE includes "#"
+        let vertex_weights = try_some!(self.get_vertex_weights(skin_element));
+
+        Some(BindData{
+            object_name: object_name.to_string(),
+            skeleton_name: skeleton_name.to_string(),
+            vertex_weights: vertex_weights
+        })
+    }
+
+    fn get_vertex_weights(&self, skin_element: &xml::Element) -> Option<Vec<VertexWeight>> {
+
+        let vertex_weights_element = try_some!(skin_element.get_child("vertex_weights", self.get_ns()));
+        let joint_index_offset = try_some!(self.get_input_offset(vertex_weights_element, "JOINT"));
+        let weight_index_offset = try_some!(self.get_input_offset(vertex_weights_element, "WEIGHT"));
+        let vcount_element = try_some!(vertex_weights_element.get_child("vertex_weights", self.get_ns()));
+        let weights_per_vertex: Vec<usize> = try_some!(get_array_content(vcount_element));
+        let input_count = vertex_weights.get_children("input", self.get_ns()).len();
+
+        let mut vertex_indices: Vec<usize> = Vec::new();
+        for (i, n) in weights_per_vertex.iter().enumerate() {
+            for _ in range(0, *n) {
+                vertex_indices.push(*n);
+            }
+        }
+
+
+
+        None
     }
 
     fn get_object(&self, geometry_element: &xml::Element) -> Option<Object> {
@@ -94,8 +143,8 @@ impl ColladaDocument {
         }
     }
 
-    fn get_input_offset(&self, polylist_element: &xml::Element, semantic : &str) -> Option<usize> {
-        let inputs = polylist_element.get_children("input", self.get_ns());
+    fn get_input_offset(&self, parent_element: &xml::Element, semantic : &str) -> Option<usize> {
+        let inputs = parent_element.get_children("input", self.get_ns());
         let input = try_some!(inputs.iter().find( |i| {
             if let Some(s) = i.get_attribute("semantic", None) {
                 s == semantic
@@ -232,7 +281,7 @@ fn get_array_content<T: FromStr>(element: &xml::Element) -> Option<Vec<T>> {
 
 #[test]
 fn test_get_obj_set() {
-    let collada_document = ColladaDocument::from_file(&Path::new("test_assets/cube.dae")).unwrap();
+    let collada_document = ColladaDocument::from_path(&Path::new("test_assets/cube.dae")).unwrap();
     let obj_set = collada_document.get_obj_set().unwrap();
     assert_eq!(obj_set.objects.len(), 1);
 
