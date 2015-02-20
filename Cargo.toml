@@ -4,9 +4,6 @@ name = "collada"
 version = "0.0.1"
 authors = ["Steve Jahns <s.t.jahns@gmail.com>"]
 
-#[dependencies.xml-rs]
-#version = "*"
-
 [dependencies.RustyXML]
 git = "https://github.com/Florob/RustyXML.git"
 
