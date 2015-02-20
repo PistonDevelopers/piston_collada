@@ -1,0 +1,26 @@
+[package]
+
+name = "collada"
+version = "0.0.1"
+authors = ["Steve Jahns <s.t.jahns@gmail.com>"]
+
+#[dependencies.xml-rs]
+#version = "*"
+
+[dependencies.RustyXML]
+git = "https://github.com/Florob/RustyXML.git"
+
+[dependencies.regex]
+version = "*"
+
+[dependencies.regex_macros]
+version = "*"
+
+[dependencies.vecmath]
+git = "https://github.com/PistonDevelopers/vecmath"
+
+[dependencies.wavefront_obj]
+git = "https://github.com/PistonDevelopers/wavefront_obj"
+
+[dependencies.quaternion]
+git = "https://github.com/PistonDevelopers/quaternion.git"
