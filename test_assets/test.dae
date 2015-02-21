@@ -5,8 +5,8 @@
       <author>Blender User</author>
       <authoring_tool>Blender 2.72.0 commit date:2014-10-21, commit time:11:38, hash:9e963ae</authoring_tool>
     </contributor>
-    <created>2015-02-21T09:54:06</created>
-    <modified>2015-02-21T09:54:06</modified>
+    <created>2015-02-21T13:34:12</created>
+    <modified>2015-02-21T13:34:12</modified>
     <unit name="meter" meter="1"/>
     <up_axis>Z_UP</up_axis>
   </asset>
@@ -274,6 +274,7 @@
   <library_visual_scenes>
     <visual_scene id="Scene" name="Scene">
       <node id="BoxWormRoot" name="BoxWormRoot" type="NODE">
+        <matrix sid="transform">1 0 0 0 0 1 0 0 0 0 1 -1 0 0 0 1</matrix>
         <translate sid="location">0 0 -1</translate>
         <rotate sid="rotationZ">0 0 1 0</rotate>
         <rotate sid="rotationY">0 1 0 0</rotate>

@@ -96,7 +96,7 @@ impl ColladaDocument {
         let mut parent_index_stack: Vec<JointIndex> = vec![ROOT_JOINT_PARENT_INDEX];
         let mut last_depth = -1;
         let mut joints = Vec::new();
-
+        let mut bind_poses = Vec::new();
 
         for (joint_index, (joint_element, depth)) in in_order_with_depth_iter(root_element)
             .filter(|&(e, _)| e.name == "node" && has_attribute_with_value(e, "type", "JOINT"))
@@ -120,6 +120,14 @@ impl ColladaDocument {
                 parent_index: *parent_index_stack.last().unwrap(),
             });
 
+            let pose_matrix_element = try_some!(joint_element.get_child("matrix", self.get_ns()));
+            let pose_matrix_array = try_some!(get_array_content(pose_matrix_element));
+            let mut pose_matrix = mat4_id();
+            for (&array_value, matrix_value) in pose_matrix_array.iter().zip(pose_matrix.iter_mut().flat_map(|n| n.iter_mut())) {
+                *matrix_value = array_value;
+            }
+            bind_poses.push(pose_matrix);
+
             parent_index_stack.push(joint_index as JointIndex);
 
             last_depth = depth;
@@ -127,6 +135,7 @@ impl ColladaDocument {
 
         Some(Skeleton {
             joints: joints,
+            bind_poses: bind_poses,
         })
     }
 
@@ -428,6 +437,7 @@ fn test_get_skeletons() {
 
     let skeleton = &skeletons[0];
     assert_eq!(skeleton.joints.len(), 4);
+    assert_eq!(skeleton.bind_poses.len(), 4);
 
     assert_eq!(skeleton.joints[0].name, "Root");
     assert_eq!(skeleton.joints[0].parent_index, (0 as JointIndex) - 1);

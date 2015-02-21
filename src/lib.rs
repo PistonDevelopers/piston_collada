@@ -10,6 +10,10 @@ extern crate xml;
 use wavefront_obj::obj::*;
 use std::num::{Float};
 
+// Necessary?
+// pub type Vector3<T> = [T; 3];
+// pub type Quaternion<T> = [T; 4];
+
 pub type Matrix4<T> = [[T; 4]; 4];
 pub fn mat4_id<T: Float>() -> Matrix4<T> {
     let _1 = Float::one();
@@ -24,15 +28,38 @@ pub fn mat4_id<T: Float>() -> Matrix4<T> {
 
 #[derive(Debug)]
 pub struct Skeleton {
+    ///
+    /// All joints in the skeleton
+    ///
     pub joints: Vec<Joint>,
+
+    ///
+    /// Default parent-relative transforms for each joint (at time of vertex binding)
+    ///
+    pub bind_poses: Vec<Matrix4<f32>>,
 }
 
 #[derive(Debug)]
 pub struct Joint {
+    ///
+    /// Name of joint
+    ///
     pub name: String,
+
+    ///
+    /// Index of parent joint in Skeleton's 'joints' vector
+    ///
     pub parent_index: JointIndex,
+
+    ///
+    /// Matrix transforming vertex coordinates from model-space to joint-space
+    ///
     pub inverse_bind_pose: Matrix4<f32>,
 }
+
+///
+/// Skeleton-Mesh Binding Data
+///
 
 #[derive(Debug)]
 pub struct BindDataSet {
