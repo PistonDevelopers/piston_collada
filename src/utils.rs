@@ -26,26 +26,26 @@ pub fn has_attribute_with_value(e: &Element, name: &str, value: &str) -> bool {
 
 ///
 /// Returns an iterator over all ElementNodes in an XML Element subtree with the given root,
-/// using an in-order tree traversal
+/// using a pre-order tree traversal (root before children)
 ///
-pub fn in_order_iter<'a>(root: &'a Element) -> InOrderIterator<'a> {
-    InOrderIterator { stack: vec![root] }
+pub fn pre_order_iter<'a>(root: &'a Element) -> PreOrderIterator<'a> {
+    PreOrderIterator { stack: vec![root] }
 }
 
 ///
 /// Returns an iterator over all ElementNodes in an XML Element subtree with the given root,
 /// with their depth relative to the subtree root,
-/// using an in-order tree traversal
+/// using a pre-order tree traversal (root before children)
 ///
-pub fn in_order_with_depth_iter<'a>(root: &'a Element) -> InOrderWithDepthIterator<'a> {
-    InOrderWithDepthIterator { stack: vec![(root, 0)] }
+pub fn pre_order_with_depth_iter<'a>(root: &'a Element) -> PreOrderWithDepthIterator<'a> {
+    PreOrderWithDepthIterator { stack: vec![(root, 0)] }
 }
 
-struct InOrderIterator<'a> {
+struct PreOrderIterator<'a> {
     stack: Vec<&'a Element>
 }
 
-impl<'a> Iterator for InOrderIterator<'a> {
+impl<'a> Iterator for PreOrderIterator<'a> {
     type Item = &'a Element;
     fn next(&mut self) -> Option<&'a Element> {
         let current_element = self.stack.pop();
@@ -63,11 +63,11 @@ impl<'a> Iterator for InOrderIterator<'a> {
     }
 }
 
-struct InOrderWithDepthIterator<'a> {
+struct PreOrderWithDepthIterator<'a> {
     stack: Vec<(&'a Element, usize)>
 }
 
-impl<'a> Iterator for InOrderWithDepthIterator<'a> {
+impl<'a> Iterator for PreOrderWithDepthIterator<'a> {
     type Item = (&'a Element, usize);
     fn next(&mut self) -> Option<(&'a Element, usize)> {
         match self.stack.pop() {

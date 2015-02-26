@@ -76,13 +76,13 @@ impl ColladaDocument {
 
         let bind_data_set = try_some!(self.get_bind_data_set());
 
-        let skeleton_ids: Vec<&str> = in_order_iter(visual_scene)
+        let skeleton_ids: Vec<&str> = pre_order_iter(visual_scene)
             .filter(|e| e.name == "skeleton")
-            .filter_map(|s| if let CharacterNode(ref id) = s.children[0] { Some(&id[]) } else { None })
+            .filter_map(|s| if let CharacterNode(ref id) = s.children[0] { Some(&id[..]) } else { None })
             .map(|id| id.trim_left_matches('#'))
             .collect();
 
-        let skeletons = in_order_iter(visual_scene)
+        let skeletons = pre_order_iter(visual_scene)
             .filter(|e| e.name == "node")
             .filter(|e| has_attribute_with_value(e, "id", skeleton_ids[0]))
             .filter_map(|e| self.get_skeleton(e, &bind_data_set.bind_data[0]))
@@ -98,7 +98,7 @@ impl ColladaDocument {
         let mut joints = Vec::new();
         let mut bind_poses = Vec::new();
 
-        for (joint_index, (joint_element, depth)) in in_order_with_depth_iter(root_element)
+        for (joint_index, (joint_element, depth)) in pre_order_with_depth_iter(root_element)
             .filter(|&(e, _)| e.name == "node" && has_attribute_with_value(e, "type", "JOINT"))
             .enumerate()
         {
@@ -230,24 +230,36 @@ impl ColladaDocument {
             }
         }).collect();
 
-        let normals_input = try_some!(self.get_input(polylist_element, "NORMAL"));
-        let normals_array = try_some!(self.get_array_for_input(mesh_element, normals_input));
-        let normals = normals_array.chunks(3).map(|coords| {
-            Normal {
-                x: coords[0],
-                y: coords[1],
-                z: coords[2],
+        let normals = {
+            match self.get_input(polylist_element, "NORMAL") {
+                Some(normals_input) => {
+                    let normals_array = try_some!(self.get_array_for_input(mesh_element, normals_input));
+                    normals_array.chunks(3).map(|coords| {
+                        Normal {
+                            x: coords[0],
+                            y: coords[1],
+                            z: coords[2],
+                        }
+                    }).collect()
+                }
+                None => Vec::new()
             }
-        }).collect();
+        };
 
-        let texcoords_input = try_some!(self.get_input(polylist_element, "TEXCOORD"));
-        let texcoords_array = try_some!(self.get_array_for_input(mesh_element, texcoords_input));
-        let texcoords = texcoords_array.chunks(2).map(|coords| {
-            TVertex {
-                x: coords[0],
-                y: coords[1],
+        let texcoords = {
+            match self.get_input(polylist_element, "TEXCOORD") {
+                Some(texcoords_input) => {
+                    let texcoords_array = try_some!(self.get_array_for_input(mesh_element, texcoords_input));
+                    texcoords_array.chunks(2).map(|coords| {
+                        TVertex {
+                            x: coords[0],
+                            y: coords[1],
+                        }
+                    }).collect()
+                }
+                None => Vec::new()
             }
-        }).collect();
+        };
 
         Some(Object {
             name: id.to_string(),
@@ -264,7 +276,7 @@ impl ColladaDocument {
 
     fn get_ns(&self) -> Option<&str> {
         match self.root_element.ns {
-            Some(ref ns) => Some(&ns[]),
+            Some(ref ns) => Some(&ns[..]),
             None => None,
         }
     }
@@ -370,6 +382,7 @@ impl ColladaDocument {
         let vcount_element = try_some!(polylist_element.get_child("vcount", self.get_ns()));
         let vertex_counts: Vec<usize> = try_some!(get_array_content(vcount_element));
 
+
         let mut vtn_iter = vtn_indices.iter();
         let shapes = vertex_counts.iter().map(|vertex_count| {
             match *vertex_count {
@@ -378,12 +391,13 @@ impl ColladaDocument {
                 3 => Shape::Triangle(*vtn_iter.next().unwrap(), *vtn_iter.next().unwrap(), *vtn_iter.next().unwrap()),
                 n => {
                     // Polys with more than 3 vertices not supported - try to advance and continue
-                    // TODO attempt to triangle-fy?
+                    // TODO attempt to triangle-fy? (take a look at wavefront_obj)
                     for _ in range(0, n) { vtn_iter.next(); };
                     Shape::Point((0, None, None))
                 }
             }
         }).collect();
+
 
         Some(shapes)
     }

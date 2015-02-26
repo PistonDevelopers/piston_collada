@@ -10,10 +10,6 @@ extern crate xml;
 use wavefront_obj::obj::*;
 use std::num::{Float};
 
-// Necessary?
-// pub type Vector3<T> = [T; 3];
-// pub type Quaternion<T> = [T; 4];
-
 pub type Matrix4<T> = [[T; 4]; 4];
 pub fn mat4_id<T: Float>() -> Matrix4<T> {
     let _1 = Float::one();
@@ -55,6 +51,12 @@ pub struct Joint {
     /// Matrix transforming vertex coordinates from model-space to joint-space
     ///
     pub inverse_bind_pose: Matrix4<f32>,
+}
+
+impl Joint {
+    pub fn is_root(&self) -> bool {
+        self.parent_index == ROOT_JOINT_PARENT_INDEX
+    }
 }
 
 ///
