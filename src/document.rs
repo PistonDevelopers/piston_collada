@@ -94,7 +94,6 @@ impl ColladaDocument {
     fn get_skeleton(&self, root_element: &Element, bind_data: &BindData) -> Option<Skeleton> {
 
         let mut parent_index_stack: Vec<JointIndex> = vec![ROOT_JOINT_PARENT_INDEX];
-        let mut last_depth = -1;
         let mut joints = Vec::new();
         let mut bind_poses = Vec::new();
 
@@ -102,16 +101,18 @@ impl ColladaDocument {
             .filter(|&(e, _)| e.name == "node" && has_attribute_with_value(e, "type", "JOINT"))
             .enumerate()
         {
-            let depth = depth as i32;
-            if depth <= last_depth { parent_index_stack.pop(); }
-            if depth < last_depth { parent_index_stack.pop(); }
+            // If our depth decreases after visiting a leaf node, pop indices off the stack
+            // until it matches our depth
+            while depth < parent_index_stack.len() - 1 {
+                parent_index_stack.pop();
+            }
 
             let joint_name = joint_element.get_attribute("id", None).unwrap().to_string();
 
             let mut joint_names_with_bind_pose = bind_data.joint_names.iter().zip(bind_data.inverse_bind_poses.iter());
             let inverse_bind_pose = match joint_names_with_bind_pose.find(|&(name, _)| *name == joint_name) {
                 Some((_, pose))  => *pose,
-                _                   => mat4_id(),
+                _                => mat4_id(),
             };
 
             joints.push(Joint {
@@ -129,8 +130,6 @@ impl ColladaDocument {
             bind_poses.push(pose_matrix);
 
             parent_index_stack.push(joint_index as JointIndex);
-
-            last_depth = depth;
         }
 
         Some(Skeleton {
