@@ -24,6 +24,16 @@ pub fn has_attribute_with_value(e: &Element, name: &str, value: &str) -> bool {
     }
 }
 
+pub fn to_matrix_array(float_array: Vec<f32>) -> Vec<[[f32; 4]; 4]> {
+    float_array.chunks(16).map(|chunk| {
+        let mut matrix = [[0f32; 4]; 4];
+        for (&chunk_value, matrix_value) in chunk.iter().zip(matrix.iter_mut().flat_map(|n| n.iter_mut())) {
+            *matrix_value = chunk_value;
+        }
+        matrix
+    }).collect()
+}
+
 ///
 /// Returns an iterator over all ElementNodes in an XML Element subtree with the given root,
 /// using a pre-order tree traversal (root before children)

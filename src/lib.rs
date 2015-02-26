@@ -7,6 +7,9 @@
 extern crate wavefront_obj;
 extern crate xml;
 
+#[macro_use]
+extern crate log;
+
 use wavefront_obj::obj::*;
 use std::num::{Float};
 
@@ -57,6 +60,31 @@ impl Joint {
     pub fn is_root(&self) -> bool {
         self.parent_index == ROOT_JOINT_PARENT_INDEX
     }
+}
+
+///
+/// A COLLADA animation consists of mapping of sample times to pose transforms
+/// for a single node in the scene (usually a skeleton joint)
+///
+/// Note - COLLADA supports animating arbitrary 'outputs', not just pose transforms,
+/// (eg colors, texture offsets, etc), but we'll leave those unsupported for now.
+///
+#[derive(Debug)]
+pub struct Animation {
+    ///
+    /// The node (joint) this animation is targeting
+    ///
+    pub target: String,
+
+    ///
+    /// Times for each sample (in seconds)
+    ///
+    pub sample_times: Vec<f32>,
+
+    ///
+    /// Node pose transforms for each sample
+    ///
+    pub sample_poses: Vec<Matrix4<f32>>,
 }
 
 ///

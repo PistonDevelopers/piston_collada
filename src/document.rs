@@ -1,16 +1,27 @@
 use std::str::FromStr;
 use std::old_io::{File};
-
 use wavefront_obj::obj::*;
 use xml;
 use xml::Element;
 use xml::Xml::{ElementNode, CharacterNode};
 
-use {BindDataSet, BindData, Skeleton, Joint, VertexWeight, JointIndex, ROOT_JOINT_PARENT_INDEX, mat4_id};
+use {Animation, BindDataSet, BindData, Skeleton, Joint, VertexWeight, JointIndex, ROOT_JOINT_PARENT_INDEX, mat4_id};
 use utils::*;
 
 macro_rules! try_some {
     ($e:expr) => (match $e { Some(s) => s, None => return None })
+}
+
+macro_rules! try_some_with_error {
+    ($e:expr, $msg:expr) => (
+        match $e {
+            Some(s) => s,
+            None => {
+                error!($msg);
+                return None
+            }
+        }
+    )
 }
 
 pub struct ColladaDocument {
@@ -39,6 +50,75 @@ impl ColladaDocument {
             Ok(root_element) => Ok(ColladaDocument{root_element: root_element}),
             Err(_) => Err("Error while parsing COLLADA document."),
         }
+    }
+
+    ///
+    /// Return a vector of all Animations in the Collada document
+    ///
+    pub fn get_animations(&self) -> Vec<Animation> {
+        info!("Loading animations from COLLADA document...");
+        match self.root_element.get_child("library_animations", self.get_ns()) {
+            Some(library_animations) => {
+                let animations = library_animations.get_children("animation", self.get_ns());
+                animations.iter().filter_map(|a| self.get_animation(a)).collect()
+            }
+            None => {
+                info!("No animations found in COLLADA document.");
+                Vec::new()
+            }
+        }
+    }
+
+    ///
+    /// Construct an Animation struct for the given <animation> element if possible
+    ///
+    fn get_animation(&self, animation_element: &Element) -> Option<Animation> {
+
+        let channel_element = try_some_with_error!(
+            animation_element.get_child("channel", self.get_ns()),
+            "Missing channel element in animation element"
+        );
+
+        let target = try_some_with_error!(
+            channel_element.get_attribute("target", None),
+            "Missing target attribute in animation channel element"
+        );
+
+        let sampler_element = try_some_with_error!(
+            animation_element.get_child("sampler", self.get_ns()),
+            "Missing sampler element in animation element"
+        );
+
+        // Note: Assuming INPUT for animation is 'time'
+        let time_input = try_some_with_error!(
+            self.get_input(sampler_element, "INPUT"),
+            "Missing input element for animation INPUT (sample time)"
+        );
+
+        let sample_times = try_some_with_error!(
+            self.get_array_for_input(animation_element, time_input),
+            "Missing / invalid source for animation INPUT"
+        );
+
+        // Note: Assuming OUTPUT for animation is a pose matrix
+        let pose_input = try_some_with_error!(
+            self.get_input(sampler_element, "OUTPUT"),
+            "Missing input element for animation OUTPUT (pose transform)"
+        );
+
+        let sample_poses_flat = try_some_with_error!(
+            self.get_array_for_input(animation_element, pose_input),
+            "Missing / invalid source for animation OUTPUT"
+        );
+
+        // Convert flat array of floats into array of matrices
+        let sample_poses = to_matrix_array(sample_poses_flat);
+
+        Some(Animation {
+            target: target.to_string(),
+            sample_times: sample_times,
+            sample_poses: sample_poses
+        })
     }
 
     ///
@@ -156,14 +236,10 @@ impl ColladaDocument {
         let weights = try_some!(self.get_array_for_input(skin_element, weights_input));
 
         let inv_bind_matrix_input = try_some!(self.get_input(joints_element, "INV_BIND_MATRIX"));
-        let inverse_bind_poses = try_some!(self.get_array_for_input(skin_element, inv_bind_matrix_input))
-            .chunks(16).map(|chunk| {
-                let mut matrix = [[0f32; 4]; 4];
-                for (&chunk_value, matrix_value) in chunk.iter().zip(matrix.iter_mut().flat_map(|n| n.iter_mut())) {
-                    *matrix_value = chunk_value;
-                }
-                matrix
-            }).collect();
+
+        let inverse_bind_poses = to_matrix_array(
+            try_some!(self.get_array_for_input(skin_element, inv_bind_matrix_input))
+        );
 
         Some(BindData{
             object_name: object_name.to_string(),
@@ -467,4 +543,21 @@ fn test_get_skeletons() {
     assert_eq!(skeleton.joints[3].name, "LowerArm");
     assert_eq!(skeleton.joints[3].parent_index, 0);
     assert!(skeleton.joints[3].inverse_bind_pose != mat4_id());
+}
+
+#[test]
+fn test_get_animations() {
+    let collada_document = ColladaDocument::from_path(&Path::new("test_assets/test.dae")).unwrap();
+    let animations = collada_document.get_animations();
+    assert_eq!(animations.len(), 4);
+
+    let ref animation = animations[1];
+    assert_eq!(animation.target, "UpperArm/transform");
+    assert_eq!(animation.sample_times.len(), 4);
+    assert_eq!(animation.sample_poses.len(), 4);
+
+    let ref animation = animations[3];
+    assert_eq!(animation.target, "LowerArm/transform");
+    assert_eq!(animation.sample_times.len(), 4);
+    assert_eq!(animation.sample_poses.len(), 4);
 }
