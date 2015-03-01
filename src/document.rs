@@ -207,6 +207,7 @@ impl ColladaDocument {
             for (&array_value, matrix_value) in pose_matrix_array.iter().zip(pose_matrix.iter_mut().flat_map(|n| n.iter_mut())) {
                 *matrix_value = array_value;
             }
+
             bind_poses.push(pose_matrix);
 
             parent_index_stack.push(joint_index as JointIndex);
@@ -265,9 +266,9 @@ impl ColladaDocument {
         let mut joint_weight_iter = joint_weight_indices.chunks(input_count);
 
         let mut vertex_indices: Vec<usize> = Vec::new();
-        for n in weights_per_vertex.iter() {
-            for _ in range(0, *n) {
-                vertex_indices.push(*n);
+        for (index, n) in weights_per_vertex.iter().enumerate() {
+            for i in range(0, *n) {
+                vertex_indices.push(index + i);
             }
         }
 
@@ -298,10 +299,11 @@ impl ColladaDocument {
         let positions_input = try_some!(self.get_input(polylist_element, "VERTEX"));
         let positions_array = try_some!(self.get_array_for_input(mesh_element, positions_input));
         let positions = positions_array.chunks(3).map(|coords| {
+            // COLLADA/Blender have z-axis as 'up', so convert coords to y-axis as up
             Vertex {
                 x: coords[0],
-                y: coords[1],
-                z: coords[2],
+                y: coords[2],
+                z: -coords[1],
             }
         }).collect();
 
@@ -310,10 +312,11 @@ impl ColladaDocument {
                 Some(normals_input) => {
                     let normals_array = try_some!(self.get_array_for_input(mesh_element, normals_input));
                     normals_array.chunks(3).map(|coords| {
+                        // COLLADA/Blender have z-axis as 'up', so convert coords to y-axis as up
                         Normal {
                             x: coords[0],
-                            y: coords[1],
-                            z: coords[2],
+                            y: coords[2],
+                            z: -coords[1],
                         }
                     }).collect()
                 }
@@ -456,7 +459,6 @@ impl ColladaDocument {
         let polylist_element = try_some!(mesh_element.get_child("polylist", self.get_ns()));
         let vcount_element = try_some!(polylist_element.get_child("vcount", self.get_ns()));
         let vertex_counts: Vec<usize> = try_some!(get_array_content(vcount_element));
-
 
         let mut vtn_iter = vtn_indices.iter();
         let shapes = vertex_counts.iter().map(|vertex_count| {
