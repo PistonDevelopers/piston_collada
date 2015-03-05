@@ -113,7 +113,7 @@ pub struct BindData {
     pub inverse_bind_poses: Vec<Matrix4<f32>>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy)]
 pub struct VertexWeight {
     pub vertex: VertexIndex,
     pub joint: JointIndex,

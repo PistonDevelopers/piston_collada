@@ -1,12 +1,11 @@
-use std::str::FromStr;
 use std::old_io::{File};
+use std::str::FromStr;
+use utils::*;
 use wavefront_obj::obj::*;
-use xml;
 use xml::Element;
 use xml::Xml::{ElementNode, CharacterNode};
-
+use xml;
 use {Animation, BindDataSet, BindData, Skeleton, Joint, VertexWeight, JointIndex, ROOT_JOINT_PARENT_INDEX, mat4_id};
-use utils::*;
 
 macro_rules! try_some {
     ($e:expr) => (match $e { Some(s) => s, None => return None })
@@ -26,6 +25,8 @@ macro_rules! try_some_with_error {
 
 pub struct ColladaDocument {
     pub root_element: xml::Element
+    // TODO figure out how to cache skeletal and skinning data, as we need to
+    // access them multiple times
 }
 
 impl ColladaDocument {
@@ -223,7 +224,7 @@ impl ColladaDocument {
 
         let skeleton_name = try_some!(controller_element.get_attribute("name", None));
         let skin_element = try_some!(controller_element.get_child("skin", self.get_ns()));
-        let object_name = try_some!(skin_element.get_attribute("source", None)); // FIXME includes "#" ..
+        let object_name = try_some!(skin_element.get_attribute("source", None)).trim_left_matches('#');
 
         let vertex_weights_element = try_some!(skin_element.get_child("vertex_weights", self.get_ns()));
         let vertex_weights = try_some!(self.get_vertex_weights(vertex_weights_element));
@@ -267,9 +268,10 @@ impl ColladaDocument {
 
         let mut vertex_indices: Vec<usize> = Vec::new();
         for (index, n) in weights_per_vertex.iter().enumerate() {
-            for i in range(0, *n) {
-                vertex_indices.push(index + i);
+            for _ in range(0, *n) {
+                vertex_indices.push(index);
             }
+
         }
 
         let vertex_weights = vertex_indices.iter().filter_map( |vertex_index| {
@@ -290,20 +292,24 @@ impl ColladaDocument {
 
     fn get_object(&self, geometry_element: &xml::Element) -> Option<Object> {
 
+
         let id = try_some!(geometry_element.get_attribute("id", None));
         let mesh_element = try_some!(geometry_element.get_child("mesh", self.get_ns()));
         let shapes = try_some!(self.get_shapes(mesh_element));
+
+        // TODO cache bind_data_set
+        let bind_data_set = try_some!(self.get_bind_data_set()); // FIXME -- might not actually have bind data
+        let bind_data_opt = bind_data_set.bind_data.iter().find(|bind_data| bind_data.object_name == id);
 
         let polylist_element = try_some!(mesh_element.get_child("polylist", self.get_ns()));
 
         let positions_input = try_some!(self.get_input(polylist_element, "VERTEX"));
         let positions_array = try_some!(self.get_array_for_input(mesh_element, positions_input));
-        let positions = positions_array.chunks(3).map(|coords| {
-            // COLLADA/Blender have z-axis as 'up', so convert coords to y-axis as up
+        let positions: Vec<_> = positions_array.chunks(3).map(|coords| {
             Vertex {
                 x: coords[0],
-                y: coords[2],
-                z: -coords[1],
+                y: coords[1],
+                z: coords[2],
             }
         }).collect();
 
@@ -312,11 +318,10 @@ impl ColladaDocument {
                 Some(normals_input) => {
                     let normals_array = try_some!(self.get_array_for_input(mesh_element, normals_input));
                     normals_array.chunks(3).map(|coords| {
-                        // COLLADA/Blender have z-axis as 'up', so convert coords to y-axis as up
                         Normal {
                             x: coords[0],
-                            y: coords[2],
-                            z: -coords[1],
+                            y: coords[1],
+                            z: coords[2],
                         }
                     }).collect()
                 }
@@ -339,11 +344,44 @@ impl ColladaDocument {
             }
         };
 
+        // TODO cache! also only if any skeleton
+        let skeleton = &self.get_skeletons().unwrap()[0];
+
+        let joint_weights = if let Some(bind_data) = bind_data_opt {
+            // Build an array of joint weights for each vertex
+            // Initialize joint weights array with no weights for any vertex
+            let mut joint_weights = vec![JointWeights { joints: [0; 4], weights: [0.0; 4] }; positions.len()];
+            for vertex_weight in bind_data.vertex_weights.iter() {
+
+                let joint_name = &bind_data.joint_names[vertex_weight.joint as usize];
+
+                let vertex_joint_weights: &mut JointWeights = &mut joint_weights[vertex_weight.vertex];
+                if let Some((next_index, _)) = vertex_joint_weights.weights.iter().enumerate().find(|&(_, weight)| *weight == 0.0) {
+
+                    if let Some((joint_index, _)) = skeleton.joints.iter().enumerate()
+                        .find(|&(_, j)| &j.name == joint_name) {
+                        vertex_joint_weights.joints[next_index] = joint_index;
+                        vertex_joint_weights.weights[next_index] = bind_data.weights[vertex_weight.weight];
+                    }
+                    else {
+                        error!("Couldn't find joint: {}", joint_name);
+                    }
+
+                } else {
+                    error!("Too many joint influences for vertex");
+                }
+            }
+            joint_weights
+        } else {
+            Vec::new()
+        };
+
         Some(Object {
             name: id.to_string(),
             vertices: positions,
             tex_vertices: texcoords,
             normals: normals,
+            joint_weights: joint_weights,
             geometry: vec![Geometry {
                 material_name: None,
                 smooth_shading_group: 0,
