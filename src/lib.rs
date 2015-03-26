@@ -1,8 +1,4 @@
 #![feature(std_misc)]
-#![feature(old_io)]
-#![feature(old_path)]
-#![feature(core)]
-#![feature(collections)]
 
 extern crate wavefront_obj;
 extern crate xml;

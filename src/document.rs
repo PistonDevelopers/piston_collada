@@ -1,4 +1,6 @@
-use std::old_io::{File};
+use std::fs::File;
+use std::io::Read;
+use std::path::Path;
 use std::str::FromStr;
 use utils::*;
 use wavefront_obj::obj::*;
@@ -42,8 +44,9 @@ impl ColladaDocument {
             Err(_) => return Err("Failed to open COLLADA file at path.")
         };
 
-        let xml_string = match file.read_to_string() {
-            Ok(file_string) => file_string,
+        let mut xml_string = String::new();
+        match file.read_to_string(&mut xml_string) {
+            Ok(_) => {},
             Err(_) => return Err("Failed to read COLLADA file.")
         };
 
@@ -268,7 +271,7 @@ impl ColladaDocument {
 
         let mut vertex_indices: Vec<usize> = Vec::new();
         for (index, n) in weights_per_vertex.iter().enumerate() {
-            for _ in range(0, *n) {
+            for _ in (0 .. *n) {
                 vertex_indices.push(index);
             }
 
@@ -507,7 +510,7 @@ impl ColladaDocument {
                 n => {
                     // Polys with more than 3 vertices not supported - try to advance and continue
                     // TODO attempt to triangle-fy? (take a look at wavefront_obj)
-                    for _ in range(0, n) { vtn_iter.next(); };
+                    for _ in (0 .. n) { vtn_iter.next(); };
                     Shape::Point((0, None, None))
                 }
             }

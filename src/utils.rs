@@ -4,7 +4,7 @@ use xml::Xml::{ElementNode, CharacterNode};
 
 pub fn parse_string_to_vector<T: FromStr>(string: &str) -> Vec<T> {
     string.trim()
-        .split_str(" ")
+        .split(" ")
         .map(|s| s.parse().ok().expect("Error parsing array in COLLADA file"))
         .collect()
 }
@@ -51,7 +51,7 @@ pub fn pre_order_with_depth_iter<'a>(root: &'a Element) -> PreOrderWithDepthIter
     PreOrderWithDepthIterator { stack: vec![(root, 0)] }
 }
 
-struct PreOrderIterator<'a> {
+pub struct PreOrderIterator<'a> {
     stack: Vec<&'a Element>
 }
 
@@ -73,7 +73,7 @@ impl<'a> Iterator for PreOrderIterator<'a> {
     }
 }
 
-struct PreOrderWithDepthIterator<'a> {
+pub struct PreOrderWithDepthIterator<'a> {
     stack: Vec<(&'a Element, usize)>
 }
 

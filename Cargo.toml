@@ -4,14 +4,11 @@ name = "collada"
 version = "0.0.1"
 authors = ["Steve Jahns <s.t.jahns@gmail.com>"]
 
+[dependencies]
+log = "*"
+
 [dependencies.RustyXML]
 git = "https://github.com/Florob/RustyXML.git"
-
-[dependencies.regex]
-version = "*"
-
-[dependencies.regex_macros]
-version = "*"
 
 [dependencies.vecmath]
 git = "https://github.com/PistonDevelopers/vecmath"
