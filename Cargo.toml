@@ -13,8 +13,5 @@ git = "https://github.com/Florob/RustyXML.git"
 [dependencies.vecmath]
 git = "https://github.com/PistonDevelopers/vecmath"
 
-[dependencies.wavefront_obj]
-git = "https://github.com/PistonDevelopers/wavefront_obj"
-
 [dependencies.quaternion]
 git = "https://github.com/PistonDevelopers/quaternion.git"

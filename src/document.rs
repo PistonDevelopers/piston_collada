@@ -3,7 +3,7 @@ use std::io::Read;
 use std::path::Path;
 use std::str::FromStr;
 use utils::*;
-use wavefront_obj::obj::*;
+use obj::*;
 use xml::Element;
 use xml::Xml::{ElementNode, CharacterNode};
 use xml;

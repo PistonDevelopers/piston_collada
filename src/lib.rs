@@ -1,13 +1,17 @@
 #![feature(std_misc)]
 
-extern crate wavefront_obj;
 extern crate xml;
 
 #[macro_use]
 extern crate log;
 
-use wavefront_obj::obj::*;
 use std::num::{Float};
+
+pub mod document;
+mod utils;
+mod obj;
+
+pub use obj::*;
 
 pub type Matrix4<T> = [[T; 4]; 4];
 pub fn mat4_id<T: Float>() -> Matrix4<T> {
@@ -30,6 +34,7 @@ pub struct Skeleton {
 
     ///
     /// Default parent-relative transforms for each joint (at time of vertex binding)
+    /// Column-major.
     ///
     pub bind_poses: Vec<Matrix4<f32>>,
 }
@@ -48,6 +53,7 @@ pub struct Joint {
 
     ///
     /// Matrix transforming vertex coordinates from model-space to joint-space
+    /// Column-major.
     ///
     pub inverse_bind_pose: Matrix4<f32>,
 }
@@ -78,7 +84,8 @@ pub struct Animation {
     pub sample_times: Vec<f32>,
 
     ///
-    /// Node pose transforms for each sample
+    /// Node pose transforms for each sample.
+    /// Column-major.
     ///
     pub sample_poses: Vec<Matrix4<f32>>,
 }
@@ -106,6 +113,7 @@ pub struct BindData {
     pub weights: Vec<f32>,
 
     /// Inverse bind pose matrices listed in order of joint_names
+    /// Column-major
     pub inverse_bind_poses: Vec<Matrix4<f32>>,
 }
 
@@ -120,6 +128,3 @@ pub type WeightIndex = usize;
 
 pub type JointIndex = u8;
 pub const ROOT_JOINT_PARENT_INDEX: JointIndex  = 0 as JointIndex - 1;
-
-pub mod document;
-mod utils;
