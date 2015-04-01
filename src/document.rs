@@ -64,7 +64,7 @@ impl ColladaDocument {
         match self.root_element.get_child("library_animations", self.get_ns()) {
             Some(library_animations) => {
                 let animations = library_animations.get_children("animation", self.get_ns());
-                animations.iter().filter_map(|a| self.get_animation(a)).collect()
+                animations.filter_map(|a| self.get_animation(a)).collect()
             }
             None => {
                 info!("No animations found in COLLADA document.");
@@ -131,8 +131,7 @@ impl ColladaDocument {
     pub fn get_obj_set(&self) -> Option<ObjSet> {
         let library_geometries = try_some!(self.root_element.get_child("library_geometries", self.get_ns()));
         let geometries = library_geometries.get_children("geometry", self.get_ns());
-        let objects = geometries.iter()
-            .filter_map( |g| { self.get_object(g) }).collect();
+        let objects = geometries.filter_map( |g| { self.get_object(g) }).collect();
 
         Some(ObjSet{
             material_library: None,
@@ -146,8 +145,7 @@ impl ColladaDocument {
     pub fn get_bind_data_set(&self) -> Option<BindDataSet> {
         let library_controllers = try_some!(self.root_element.get_child("library_controllers", self.get_ns()));
         let controllers = library_controllers.get_children("controller", self.get_ns());
-        let bind_data = controllers.iter()
-            .filter_map( |c| { self.get_bind_data(c) }).collect();
+        let bind_data = controllers.filter_map( |c| { self.get_bind_data(c) }).collect();
         Some(BindDataSet{ bind_data: bind_data })
     }
 
@@ -263,7 +261,7 @@ impl ColladaDocument {
 
         let vcount_element = try_some!(vertex_weights_element.get_child("vcount", self.get_ns()));
         let weights_per_vertex: Vec<usize> = try_some!(get_array_content(vcount_element));
-        let input_count = vertex_weights_element.get_children("input", self.get_ns()).len();
+        let input_count = vertex_weights_element.get_children("input", self.get_ns()).count();
 
         let v_element = try_some!(vertex_weights_element.get_child("v", self.get_ns()));
         let joint_weight_indices: Vec<usize> = try_some!(get_array_content(v_element));
@@ -401,8 +399,8 @@ impl ColladaDocument {
     }
 
     fn get_input_offset(&self, parent_element: &xml::Element, semantic : &str) -> Option<usize> {
-        let inputs = parent_element.get_children("input", self.get_ns());
-        let input = try_some!(inputs.iter().find( |i| {
+        let mut inputs = parent_element.get_children("input", self.get_ns());
+        let input = try_some!(inputs.find( |i| {
             if let Some(s) = i.get_attribute("semantic", None) {
                 s == semantic
             } else {
@@ -413,12 +411,12 @@ impl ColladaDocument {
     }
 
     fn get_input<'a>(&'a self, parent: &'a Element, semantic : &str) -> Option<&'a Element> {
-        let inputs = parent.get_children("input", self.get_ns());
-        match inputs.iter().find( |i| {
+        let mut inputs = parent.get_children("input", self.get_ns());
+        match inputs.find( |i| {
             if let Some(s) = i.get_attribute("semantic", None) { s == semantic } else { false }
         })
         {
-            Some(e) => Some(*e),
+            Some(e) => Some(e),
             None => None,
         }
     }
@@ -467,7 +465,7 @@ impl ColladaDocument {
         let p_element = try_some!(polylist_element.get_child("p", self.get_ns()));
         let indices: Vec<usize> = try_some!(get_array_content(p_element));
 
-        let input_count = polylist_element.get_children("input", self.get_ns()).len();
+        let input_count = polylist_element.get_children("input", self.get_ns()).count();
 
         let position_offset = try_some!(self.get_input_offset(polylist_element, "VERTEX"));
 
