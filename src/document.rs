@@ -1,12 +1,13 @@
+use std::fs::File;
+use std::io::Read;
+use std::path::Path;
 use std::str::FromStr;
-use std::old_io::{File};
-use wavefront_obj::obj::*;
-use xml;
+use utils::*;
+use obj::*;
 use xml::Element;
 use xml::Xml::{ElementNode, CharacterNode};
-
+use xml;
 use {Animation, BindDataSet, BindData, Skeleton, Joint, VertexWeight, JointIndex, ROOT_JOINT_PARENT_INDEX, mat4_id};
-use utils::*;
 
 macro_rules! try_some {
     ($e:expr) => (match $e { Some(s) => s, None => return None })
@@ -26,6 +27,8 @@ macro_rules! try_some_with_error {
 
 pub struct ColladaDocument {
     pub root_element: xml::Element
+    // TODO figure out how to cache skeletal and skinning data, as we need to
+    // access them multiple times
 }
 
 impl ColladaDocument {
@@ -41,8 +44,9 @@ impl ColladaDocument {
             Err(_) => return Err("Failed to open COLLADA file at path.")
         };
 
-        let xml_string = match file.read_to_string() {
-            Ok(file_string) => file_string,
+        let mut xml_string = String::new();
+        match file.read_to_string(&mut xml_string) {
+            Ok(_) => {},
             Err(_) => return Err("Failed to read COLLADA file.")
         };
 
@@ -60,7 +64,7 @@ impl ColladaDocument {
         match self.root_element.get_child("library_animations", self.get_ns()) {
             Some(library_animations) => {
                 let animations = library_animations.get_children("animation", self.get_ns());
-                animations.iter().filter_map(|a| self.get_animation(a)).collect()
+                animations.filter_map(|a| self.get_animation(a)).collect()
             }
             None => {
                 info!("No animations found in COLLADA document.");
@@ -127,8 +131,7 @@ impl ColladaDocument {
     pub fn get_obj_set(&self) -> Option<ObjSet> {
         let library_geometries = try_some!(self.root_element.get_child("library_geometries", self.get_ns()));
         let geometries = library_geometries.get_children("geometry", self.get_ns());
-        let objects = geometries.iter()
-            .filter_map( |g| { self.get_object(g) }).collect();
+        let objects = geometries.filter_map( |g| { self.get_object(g) }).collect();
 
         Some(ObjSet{
             material_library: None,
@@ -142,8 +145,7 @@ impl ColladaDocument {
     pub fn get_bind_data_set(&self) -> Option<BindDataSet> {
         let library_controllers = try_some!(self.root_element.get_child("library_controllers", self.get_ns()));
         let controllers = library_controllers.get_children("controller", self.get_ns());
-        let bind_data = controllers.iter()
-            .filter_map( |c| { self.get_bind_data(c) }).collect();
+        let bind_data = controllers.filter_map( |c| { self.get_bind_data(c) }).collect();
         Some(BindDataSet{ bind_data: bind_data })
     }
 
@@ -223,7 +225,7 @@ impl ColladaDocument {
 
         let skeleton_name = try_some!(controller_element.get_attribute("name", None));
         let skin_element = try_some!(controller_element.get_child("skin", self.get_ns()));
-        let object_name = try_some!(skin_element.get_attribute("source", None)); // FIXME includes "#" ..
+        let object_name = try_some!(skin_element.get_attribute("source", None)).trim_left_matches('#');
 
         let vertex_weights_element = try_some!(skin_element.get_child("vertex_weights", self.get_ns()));
         let vertex_weights = try_some!(self.get_vertex_weights(vertex_weights_element));
@@ -259,7 +261,7 @@ impl ColladaDocument {
 
         let vcount_element = try_some!(vertex_weights_element.get_child("vcount", self.get_ns()));
         let weights_per_vertex: Vec<usize> = try_some!(get_array_content(vcount_element));
-        let input_count = vertex_weights_element.get_children("input", self.get_ns()).len();
+        let input_count = vertex_weights_element.get_children("input", self.get_ns()).count();
 
         let v_element = try_some!(vertex_weights_element.get_child("v", self.get_ns()));
         let joint_weight_indices: Vec<usize> = try_some!(get_array_content(v_element));
@@ -267,9 +269,10 @@ impl ColladaDocument {
 
         let mut vertex_indices: Vec<usize> = Vec::new();
         for (index, n) in weights_per_vertex.iter().enumerate() {
-            for i in range(0, *n) {
-                vertex_indices.push(index + i);
+            for _ in (0 .. *n) {
+                vertex_indices.push(index);
             }
+
         }
 
         let vertex_weights = vertex_indices.iter().filter_map( |vertex_index| {
@@ -290,20 +293,24 @@ impl ColladaDocument {
 
     fn get_object(&self, geometry_element: &xml::Element) -> Option<Object> {
 
+
         let id = try_some!(geometry_element.get_attribute("id", None));
         let mesh_element = try_some!(geometry_element.get_child("mesh", self.get_ns()));
         let shapes = try_some!(self.get_shapes(mesh_element));
+
+        // TODO cache bind_data_set
+        let bind_data_set = try_some!(self.get_bind_data_set()); // FIXME -- might not actually have bind data
+        let bind_data_opt = bind_data_set.bind_data.iter().find(|bind_data| bind_data.object_name == id);
 
         let polylist_element = try_some!(mesh_element.get_child("polylist", self.get_ns()));
 
         let positions_input = try_some!(self.get_input(polylist_element, "VERTEX"));
         let positions_array = try_some!(self.get_array_for_input(mesh_element, positions_input));
-        let positions = positions_array.chunks(3).map(|coords| {
-            // COLLADA/Blender have z-axis as 'up', so convert coords to y-axis as up
+        let positions: Vec<_> = positions_array.chunks(3).map(|coords| {
             Vertex {
                 x: coords[0],
-                y: coords[2],
-                z: -coords[1],
+                y: coords[1],
+                z: coords[2],
             }
         }).collect();
 
@@ -312,11 +319,10 @@ impl ColladaDocument {
                 Some(normals_input) => {
                     let normals_array = try_some!(self.get_array_for_input(mesh_element, normals_input));
                     normals_array.chunks(3).map(|coords| {
-                        // COLLADA/Blender have z-axis as 'up', so convert coords to y-axis as up
                         Normal {
                             x: coords[0],
-                            y: coords[2],
-                            z: -coords[1],
+                            y: coords[1],
+                            z: coords[2],
                         }
                     }).collect()
                 }
@@ -339,11 +345,44 @@ impl ColladaDocument {
             }
         };
 
+        // TODO cache! also only if any skeleton
+        let skeleton = &self.get_skeletons().unwrap()[0];
+
+        let joint_weights = if let Some(bind_data) = bind_data_opt {
+            // Build an array of joint weights for each vertex
+            // Initialize joint weights array with no weights for any vertex
+            let mut joint_weights = vec![JointWeights { joints: [0; 4], weights: [0.0; 4] }; positions.len()];
+            for vertex_weight in bind_data.vertex_weights.iter() {
+
+                let joint_name = &bind_data.joint_names[vertex_weight.joint as usize];
+
+                let vertex_joint_weights: &mut JointWeights = &mut joint_weights[vertex_weight.vertex];
+                if let Some((next_index, _)) = vertex_joint_weights.weights.iter().enumerate().find(|&(_, weight)| *weight == 0.0) {
+
+                    if let Some((joint_index, _)) = skeleton.joints.iter().enumerate()
+                        .find(|&(_, j)| &j.name == joint_name) {
+                        vertex_joint_weights.joints[next_index] = joint_index;
+                        vertex_joint_weights.weights[next_index] = bind_data.weights[vertex_weight.weight];
+                    }
+                    else {
+                        error!("Couldn't find joint: {}", joint_name);
+                    }
+
+                } else {
+                    error!("Too many joint influences for vertex");
+                }
+            }
+            joint_weights
+        } else {
+            Vec::new()
+        };
+
         Some(Object {
             name: id.to_string(),
             vertices: positions,
             tex_vertices: texcoords,
             normals: normals,
+            joint_weights: joint_weights,
             geometry: vec![Geometry {
                 material_name: None,
                 smooth_shading_group: 0,
@@ -360,8 +399,8 @@ impl ColladaDocument {
     }
 
     fn get_input_offset(&self, parent_element: &xml::Element, semantic : &str) -> Option<usize> {
-        let inputs = parent_element.get_children("input", self.get_ns());
-        let input = try_some!(inputs.iter().find( |i| {
+        let mut inputs = parent_element.get_children("input", self.get_ns());
+        let input = try_some!(inputs.find( |i| {
             if let Some(s) = i.get_attribute("semantic", None) {
                 s == semantic
             } else {
@@ -372,12 +411,12 @@ impl ColladaDocument {
     }
 
     fn get_input<'a>(&'a self, parent: &'a Element, semantic : &str) -> Option<&'a Element> {
-        let inputs = parent.get_children("input", self.get_ns());
-        match inputs.iter().find( |i| {
+        let mut inputs = parent.get_children("input", self.get_ns());
+        match inputs.find( |i| {
             if let Some(s) = i.get_attribute("semantic", None) { s == semantic } else { false }
         })
         {
-            Some(e) => Some(*e),
+            Some(e) => Some(e),
             None => None,
         }
     }
@@ -426,7 +465,7 @@ impl ColladaDocument {
         let p_element = try_some!(polylist_element.get_child("p", self.get_ns()));
         let indices: Vec<usize> = try_some!(get_array_content(p_element));
 
-        let input_count = polylist_element.get_children("input", self.get_ns()).len();
+        let input_count = polylist_element.get_children("input", self.get_ns()).count();
 
         let position_offset = try_some!(self.get_input_offset(polylist_element, "VERTEX"));
 
@@ -469,7 +508,7 @@ impl ColladaDocument {
                 n => {
                     // Polys with more than 3 vertices not supported - try to advance and continue
                     // TODO attempt to triangle-fy? (take a look at wavefront_obj)
-                    for _ in range(0, n) { vtn_iter.next(); };
+                    for _ in (0 .. n) { vtn_iter.next(); };
                     Shape::Point((0, None, None))
                 }
             }
