@@ -25,7 +25,7 @@ pub fn mat4_id<T: Float>() -> Matrix4<T> {
     ]
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Skeleton {
     ///
     /// All joints in the skeleton
@@ -39,7 +39,7 @@ pub struct Skeleton {
     pub bind_poses: Vec<Matrix4<f32>>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Joint {
     ///
     /// Name of joint
