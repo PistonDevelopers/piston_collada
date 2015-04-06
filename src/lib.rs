@@ -117,7 +117,7 @@ pub struct BindData {
     pub inverse_bind_poses: Vec<Matrix4<f32>>,
 }
 
-#[derive(Debug, Copy)]
+#[derive(Debug, Copy, Clone)]
 pub struct VertexWeight {
     pub vertex: VertexIndex,
     pub joint: JointIndex,
@@ -127,4 +127,4 @@ pub struct VertexWeight {
 pub type WeightIndex = usize;
 
 pub type JointIndex = u8;
-pub const ROOT_JOINT_PARENT_INDEX: JointIndex  = 0 as JointIndex - 1;
+pub const ROOT_JOINT_PARENT_INDEX: JointIndex  = 255u8;
