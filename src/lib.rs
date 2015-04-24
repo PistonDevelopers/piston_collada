@@ -1,29 +1,15 @@
-#![feature(std_misc)]
-
 extern crate xml;
+extern crate vecmath;
 
 #[macro_use]
 extern crate log;
 
-use std::num::{Float};
+pub use obj::*;
+pub use vecmath::Matrix4;
 
 pub mod document;
 mod utils;
 mod obj;
-
-pub use obj::*;
-
-pub type Matrix4<T> = [[T; 4]; 4];
-pub fn mat4_id<T: Float>() -> Matrix4<T> {
-    let _1 = Float::one();
-    let _0 = Float::zero();
-    [
-        [_1, _0, _0, _0],
-        [_0, _1, _0, _0],
-        [_0, _0, _1, _0],
-        [_0, _0, _0, _1],
-    ]
-}
 
 #[derive(Debug, Clone)]
 pub struct Skeleton {

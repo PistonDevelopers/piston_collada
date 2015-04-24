@@ -6,8 +6,11 @@ use utils::*;
 use obj::*;
 use xml::Element;
 use xml::Xml::{ElementNode, CharacterNode};
+
+use vecmath;
 use xml;
-use {Animation, BindDataSet, BindData, Skeleton, Joint, VertexWeight, JointIndex, ROOT_JOINT_PARENT_INDEX, mat4_id};
+
+use {Animation, BindDataSet, BindData, Skeleton, Joint, VertexWeight, JointIndex, ROOT_JOINT_PARENT_INDEX};
 
 macro_rules! try_some {
     ($e:expr) => (match $e { Some(s) => s, None => return None })
@@ -194,7 +197,7 @@ impl ColladaDocument {
             let mut joint_names_with_bind_pose = bind_data.joint_names.iter().zip(bind_data.inverse_bind_poses.iter());
             let inverse_bind_pose = match joint_names_with_bind_pose.find(|&(name, _)| *name == joint_name) {
                 Some((_, pose))  => *pose,
-                _                => mat4_id(),
+                _                => vecmath::mat4_id(),
             };
 
             joints.push(Joint {
@@ -205,7 +208,7 @@ impl ColladaDocument {
 
             let pose_matrix_element = try_some!(joint_element.get_child("matrix", self.get_ns()));
             let pose_matrix_array = try_some!(get_array_content(pose_matrix_element));
-            let mut pose_matrix = mat4_id();
+            let mut pose_matrix = vecmath::mat4_id();
             for (&array_value, matrix_value) in pose_matrix_array.iter().zip(pose_matrix.iter_mut().flat_map(|n| n.iter_mut())) {
                 *matrix_value = array_value;
             }
