@@ -554,8 +554,8 @@ fn test_get_bind_data_set() {
     let bind_data_set = collada_document.get_bind_data_set().unwrap();
     let bind_data = &bind_data_set.bind_data[0];
 
-    assert_eq!(bind_data.object_name, "#BoxyWorm-mesh"); // FIXME
-    assert_eq!(bind_data.skeleton_name, "BoxWormRoot"); // FIXME
+    assert_eq!(bind_data.object_name, "BoxyWorm-mesh");
+    assert_eq!(bind_data.skeleton_name, "BoxWormRoot");
     assert_eq!(bind_data.joint_names, ["Root", "UpperArm", "LowerArm"]);
     assert_eq!(bind_data.vertex_weights.len(), 29);
     assert_eq!(bind_data.weights.len(), 29);
@@ -573,20 +573,20 @@ fn test_get_skeletons() {
     assert_eq!(skeleton.bind_poses.len(), 4);
 
     assert_eq!(skeleton.joints[0].name, "Root");
-    assert_eq!(skeleton.joints[0].parent_index, (0 as JointIndex) - 1);
-    assert!(skeleton.joints[0].inverse_bind_pose != mat4_id());
+    assert_eq!(skeleton.joints[0].parent_index, ROOT_JOINT_PARENT_INDEX);
+    assert!(skeleton.joints[0].inverse_bind_pose != vecmath::mat4_id());
 
     assert_eq!(skeleton.joints[1].name, "UpperArm");
     assert_eq!(skeleton.joints[1].parent_index, 0);
-    assert!(skeleton.joints[1].inverse_bind_pose != mat4_id());
+    assert!(skeleton.joints[1].inverse_bind_pose != vecmath::mat4_id());
 
     assert_eq!(skeleton.joints[2].name, "UpperArmDanglyBit");
     assert_eq!(skeleton.joints[2].parent_index, 1);
-    assert_eq!(skeleton.joints[2].inverse_bind_pose, mat4_id());
+    assert_eq!(skeleton.joints[2].inverse_bind_pose, vecmath::mat4_id());
 
     assert_eq!(skeleton.joints[3].name, "LowerArm");
     assert_eq!(skeleton.joints[3].parent_index, 0);
-    assert!(skeleton.joints[3].inverse_bind_pose != mat4_id());
+    assert!(skeleton.joints[3].inverse_bind_pose != vecmath::mat4_id());
 }
 
 #[test]

@@ -3,15 +3,21 @@
 name = "collada"
 version = "0.0.1"
 authors = ["Steve Jahns <s.t.jahns@gmail.com>"]
+keywords = ["collada", "piston"]
+description = "A library for parsing COLLADA documents for mesh, skeletal and animation data"
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/PistonDevelopers/piston_collada"
+homepage = "https://github.com/PistonDevelopers/piston_collada"
+
+[lib]
+
+name = "collada"
+path = "src/lib.rs"
 
 [dependencies]
+
 log = "*"
-
-[dependencies.RustyXML]
-git = "https://github.com/Florob/RustyXML.git"
-
-[dependencies.vecmath]
-git = "https://github.com/PistonDevelopers/vecmath"
-
-[dependencies.quaternion]
-git = "https://github.com/PistonDevelopers/quaternion.git"
+RustyXML = "0.1.*"
+vecmath = "*"
+quaternion = "*"
