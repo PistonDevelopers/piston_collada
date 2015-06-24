@@ -1,9 +1,9 @@
 [package]
 
 name = "collada"
-version = "0.0.1"
+version = "0.1.0"
 authors = ["Steve Jahns <s.t.jahns@gmail.com>"]
-keywords = ["collada", "piston"]
+keywords = ["collada", "3d", "format", "piston"]
 description = "A library for parsing COLLADA documents for mesh, skeletal and animation data"
 license = "MIT"
 readme = "README.md"
@@ -17,7 +17,7 @@ path = "src/lib.rs"
 
 [dependencies]
 
-log = "*"
-RustyXML = "0.1.*"
-vecmath = "*"
-quaternion = "*"
+log = "0.3"
+RustyXML = "0.1.1"
+vecmath = "0.1.1"
+quaternion = "0.1.0"
