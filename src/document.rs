@@ -167,6 +167,10 @@ impl ColladaDocument {
             .map(|id| id.trim_left_matches('#'))
             .collect();
 
+        if skeleton_ids.is_empty() {
+            return None;
+        }
+
         let skeletons = pre_order_iter(visual_scene)
             .filter(|e| e.name == "node")
             .filter(|e| has_attribute_with_value(e, "id", skeleton_ids[0]))
@@ -295,8 +299,6 @@ impl ColladaDocument {
     }
 
     fn get_object(&self, geometry_element: &xml::Element) -> Option<Object> {
-
-
         let id = try_some!(geometry_element.get_attribute("id", None));
         let mesh_element = try_some!(geometry_element.get_child("mesh", self.get_ns()));
         let shapes = try_some!(self.get_shapes(mesh_element));
@@ -349,35 +351,38 @@ impl ColladaDocument {
         };
 
         // TODO cache! also only if any skeleton
-        let skeleton = &self.get_skeletons().unwrap()[0];
 
-        let joint_weights = if let Some(bind_data) = bind_data_opt {
-            // Build an array of joint weights for each vertex
-            // Initialize joint weights array with no weights for any vertex
-            let mut joint_weights = vec![JointWeights { joints: [0; 4], weights: [0.0; 4] }; positions.len()];
-            for vertex_weight in bind_data.vertex_weights.iter() {
+        let mut joint_weights = match self.get_skeletons() {
+            Some(skeletons) => {
+                let skeleton = &skeletons[0];
+                if let Some(bind_data) = bind_data_opt {
+                    // Build an array of joint weights for each vertex
+                    // Initialize joint weights array with no weights for any vertex
+                    let mut joint_weights = vec![JointWeights { joints: [0; 4], weights: [0.0; 4] }; positions.len()];
 
-                let joint_name = &bind_data.joint_names[vertex_weight.joint as usize];
+                    for vertex_weight in bind_data.vertex_weights.iter() {
+                        let joint_name = &bind_data.joint_names[vertex_weight.joint as usize];
+                        let vertex_joint_weights: &mut JointWeights = &mut joint_weights[vertex_weight.vertex];
 
-                let vertex_joint_weights: &mut JointWeights = &mut joint_weights[vertex_weight.vertex];
-                if let Some((next_index, _)) = vertex_joint_weights.weights.iter().enumerate().find(|&(_, weight)| *weight == 0.0) {
+                        if let Some((next_index, _)) = vertex_joint_weights.weights.iter().enumerate().find(|&(_, weight)| *weight == 0.0) {
+                            if let Some((joint_index, _)) = skeleton.joints.iter().enumerate()
+                                .find(|&(_, j)| &j.name == joint_name) {
+                                vertex_joint_weights.joints[next_index] = joint_index;
+                                vertex_joint_weights.weights[next_index] = bind_data.weights[vertex_weight.weight];
+                            } else {
+                                error!("Couldn't find joint: {}", joint_name);
+                            }
 
-                    if let Some((joint_index, _)) = skeleton.joints.iter().enumerate()
-                        .find(|&(_, j)| &j.name == joint_name) {
-                        vertex_joint_weights.joints[next_index] = joint_index;
-                        vertex_joint_weights.weights[next_index] = bind_data.weights[vertex_weight.weight];
+                        } else {
+                            error!("Too many joint influences for vertex");
+                        }
                     }
-                    else {
-                        error!("Couldn't find joint: {}", joint_name);
-                    }
-
+                    joint_weights
                 } else {
-                    error!("Too many joint influences for vertex");
+                    Vec::new()
                 }
-            }
-            joint_weights
-        } else {
-            Vec::new()
+            },
+            None => Vec::new()
         };
 
         Some(Object {
@@ -604,4 +609,10 @@ fn test_get_animations() {
     assert_eq!(animation.target, "LowerArm/transform");
     assert_eq!(animation.sample_times.len(), 4);
     assert_eq!(animation.sample_poses.len(), 4);
+}
+
+#[test]
+fn test_get_obj_set_noskeleton() {
+    let collada_document = ColladaDocument::from_path(&Path::new("test_assets/test_noskeleton.dae")).unwrap();
+    collada_document.get_obj_set().unwrap();
 }
