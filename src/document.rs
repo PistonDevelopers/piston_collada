@@ -5,7 +5,7 @@ use std::str::FromStr;
 use utils::*;
 use obj::*;
 use xml::Element;
-use xml::Xml::{ElementNode, CharacterNode};
+use xml::Xml::CharacterNode;
 
 use vecmath;
 use xml;
@@ -276,7 +276,7 @@ impl ColladaDocument {
 
         let mut vertex_indices: Vec<usize> = Vec::new();
         for (index, n) in weights_per_vertex.iter().enumerate() {
-            for _ in (0 .. *n) {
+            for _ in 0 .. *n {
                 vertex_indices.push(index);
             }
 
@@ -352,7 +352,7 @@ impl ColladaDocument {
 
         // TODO cache! also only if any skeleton
 
-        let mut joint_weights = match self.get_skeletons() {
+        let joint_weights = match self.get_skeletons() {
             Some(skeletons) => {
                 let skeleton = &skeletons[0];
                 if let Some(bind_data) = bind_data_opt {
@@ -516,7 +516,7 @@ impl ColladaDocument {
                 n => {
                     // Polys with more than 3 vertices not supported - try to advance and continue
                     // TODO attempt to triangle-fy? (take a look at wavefront_obj)
-                    for _ in (0 .. n) { vtn_iter.next(); };
+                    for _ in 0 .. n { vtn_iter.next(); };
                     Shape::Point((0, None, None))
                 }
             }
