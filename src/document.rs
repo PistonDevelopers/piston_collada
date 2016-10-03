@@ -595,7 +595,7 @@ fn test_get_skeletons() {
 #[test]
 fn test_get_animations() {
     let collada_document = ColladaDocument::from_path(&Path::new("test_assets/test.dae")).unwrap();
-    let animations = collada_document.get_animations();
+    let animations = collada_document.get_animations().unwrap();
     assert_eq!(animations.len(), 4);
 
     let ref animation = animations[1];
