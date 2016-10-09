@@ -62,16 +62,14 @@ impl ColladaDocument {
     ///
     /// Return a vector of all Animations in the Collada document
     ///
-    pub fn get_animations(&self) -> Vec<Animation> {
-        info!("Loading animations from COLLADA document...");
+    pub fn get_animations(&self) -> Option<Vec<Animation>> {
         match self.root_element.get_child("library_animations", self.get_ns()) {
             Some(library_animations) => {
                 let animations = library_animations.get_children("animation", self.get_ns());
-                animations.filter_map(|a| self.get_animation(a)).collect()
+                Some(animations.filter_map(|a| self.get_animation(a)).collect())
             }
             None => {
-                info!("No animations found in COLLADA document.");
-                Vec::new()
+                None
             }
         }
     }
@@ -597,7 +595,7 @@ fn test_get_skeletons() {
 #[test]
 fn test_get_animations() {
     let collada_document = ColladaDocument::from_path(&Path::new("test_assets/test.dae")).unwrap();
-    let animations = collada_document.get_animations();
+    let animations = collada_document.get_animations().unwrap();
     assert_eq!(animations.len(), 4);
 
     let ref animation = animations[1];
