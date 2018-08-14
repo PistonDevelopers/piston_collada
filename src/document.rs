@@ -28,6 +28,26 @@ macro_rules! try_some_with_error {
     )
 }
 
+enum GeometryBindingType {
+    Polylist,
+    Triangles,
+    // TODO types below are not implemented
+    // Lines,
+    // Linestrips,
+    // Polygons,
+    // Trifans,
+    // Tristrips,
+}
+
+impl GeometryBindingType {
+    fn name(&self) -> &'static str {
+        match *self {
+            GeometryBindingType::Polylist => "polylist",
+            GeometryBindingType::Triangles => "triangles",
+        }
+    }
+}
+
 pub struct ColladaDocument {
     pub root_element: xml::Element
     // TODO figure out how to cache skeletal and skinning data, as we need to
@@ -300,8 +320,9 @@ impl ColladaDocument {
         let id = try_some!(geometry_element.get_attribute("id", None));
         let mesh_element = try_some!(geometry_element.get_child("mesh", self.get_ns()));
         let shapes = try_some!(self.get_shapes(mesh_element));
+        let binding_type = try_some!(self.get_geometry_binding_type(mesh_element));
 
-        let polylist_element = try_some!(mesh_element.get_child("polylist", self.get_ns()));
+        let polylist_element = try_some!(mesh_element.get_child(binding_type.name(), self.get_ns()));
         let positions_input = try_some!(self.get_input(polylist_element, "VERTEX"));
         let positions_array = try_some!(self.get_array_for_input(mesh_element, positions_input));
         let positions: Vec<_> = positions_array.chunks(3).map(|coords| {
@@ -464,18 +485,18 @@ impl ColladaDocument {
         get_array_content(array_element)
     }
 
-    fn get_vtn_indices(&self, mesh_element: &xml::Element) -> Option<Vec<VTNIndex>> {
+    fn get_vtn_indices(&self, mesh_element: &xml::Element, bind_type: GeometryBindingType) -> Option<Vec<VTNIndex>> {
 
-        let polylist_element = try_some!(mesh_element.get_child("polylist", self.get_ns()));
-        let p_element = try_some!(polylist_element.get_child("p", self.get_ns()));
+        let bind_element = try_some!(mesh_element.get_child(bind_type.name(), self.get_ns()));
+        let p_element = try_some!(bind_element.get_child("p", self.get_ns()));
         let indices: Vec<usize> = try_some!(get_array_content(p_element));
 
-        let input_count = polylist_element.get_children("input", self.get_ns()).count();
+        let input_count = bind_element.get_children("input", self.get_ns()).count();
 
-        let position_offset = try_some!(self.get_input_offset(polylist_element, "VERTEX"));
+        let position_offset = try_some!(self.get_input_offset(bind_element, "VERTEX"));
 
-        let normal_offset_opt = self.get_input_offset(polylist_element, "NORMAL");
-        let texcoord_offset_opt = self.get_input_offset(polylist_element, "TEXCOORD");
+        let normal_offset_opt = self.get_input_offset(bind_element, "NORMAL");
+        let texcoord_offset_opt = self.get_input_offset(bind_element, "TEXCOORD");
 
         let vtn_indices: Vec<VTNIndex> = indices.chunks(input_count).map( |indices| {
             let position_index = indices[position_offset];
@@ -496,11 +517,42 @@ impl ColladaDocument {
         Some(vtn_indices)
     }
 
+    fn get_geometry_binding_type(&self, mesh_element: &xml::Element) -> Option<GeometryBindingType> {
+        if mesh_element.get_child(GeometryBindingType::Polylist.name(), self.get_ns()).is_some() {
+            return Some(GeometryBindingType::Polylist)
+        }
+        if mesh_element.get_child(GeometryBindingType::Triangles.name(), self.get_ns()).is_some() {
+            return Some(GeometryBindingType::Triangles)
+        }
+        None
+    }
+
     fn get_shapes(&self, mesh_element: &xml::Element) -> Option<Vec<Shape>> {
+        match self.get_geometry_binding_type(mesh_element) {
+            Some(GeometryBindingType::Polylist) => self.get_polylist_shape(mesh_element),
+            Some(GeometryBindingType::Triangles) => self.get_triangles_shape(mesh_element),
+            _ => None,
+        }
+    }
 
-        let vtn_indices = try_some!(self.get_vtn_indices(mesh_element));
+    fn get_triangles_shape(&self, mesh_element: &xml::Element) -> Option<Vec<Shape>> {
+        let vtn_indices = try_some!(self.get_vtn_indices(mesh_element, GeometryBindingType::Triangles));
 
-        let polylist_element = try_some!(mesh_element.get_child("polylist", self.get_ns()));
+        let triangles = try_some!(mesh_element.get_child(GeometryBindingType::Triangles.name(), self.get_ns()));
+        let count = try_some!(triangles.get_attribute("count", None)).parse::<usize>().ok().unwrap();
+
+        let mut vtn_iter = vtn_indices.iter();
+        let shapes = (0..count).map(|_| {
+            Shape::Triangle(*vtn_iter.next().unwrap(), *vtn_iter.next().unwrap(), *vtn_iter.next().unwrap())
+        }).collect();
+
+        Some(shapes)
+    }
+
+    fn get_polylist_shape(&self, mesh_element: &xml::Element) -> Option<Vec<Shape>> {
+        let vtn_indices = try_some!(self.get_vtn_indices(mesh_element, GeometryBindingType::Polylist));
+
+        let polylist_element = try_some!(mesh_element.get_child(GeometryBindingType::Polylist.name(), self.get_ns()));
         let vcount_element = try_some!(polylist_element.get_child("vcount", self.get_ns()));
         let vertex_counts: Vec<usize> = try_some!(get_array_content(vcount_element));
 
@@ -544,6 +596,30 @@ fn test_get_obj_set() {
     if let &Shape::Triangle((position_index, Some(texture_index), Some(normal_index)), _, _) = shape {
         assert_eq!(position_index, 7);
         assert_eq!(texture_index, 3);
+        assert_eq!(normal_index, 1);
+    } else {
+        assert!(false);
+    }
+}
+
+#[test]
+fn test_get_obj_set_triangles_geometry() {
+    let collada_document = ColladaDocument::from_path(&Path::new("test_assets/test_cube_triangles_geometry.dae")).unwrap();
+    let obj_set = collada_document.get_obj_set().unwrap();
+    assert_eq!(obj_set.objects.len(), 1);
+
+    let ref object = obj_set.objects[0];
+    assert_eq!(object.name, "Cube-mesh");
+    assert_eq!(object.vertices.len(), 8);
+    assert_eq!(object.normals.len(), 12);
+    assert_eq!(object.geometry.len(), 1);
+
+    let ref geometry = object.geometry[0];
+    assert_eq!(geometry.shapes.len(), 12);
+
+    let ref shape = geometry.shapes[1];
+    if let &Shape::Triangle((position_index, _, Some(normal_index)), _, _) = shape {
+        assert_eq!(position_index, 7);
         assert_eq!(normal_index, 1);
     } else {
         assert!(false);
