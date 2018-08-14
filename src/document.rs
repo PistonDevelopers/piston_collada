@@ -301,12 +301,7 @@ impl ColladaDocument {
         let mesh_element = try_some!(geometry_element.get_child("mesh", self.get_ns()));
         let shapes = try_some!(self.get_shapes(mesh_element));
 
-        // TODO cache bind_data_set
-        let bind_data_set = try_some!(self.get_bind_data_set()); // FIXME -- might not actually have bind data
-        let bind_data_opt = bind_data_set.bind_data.iter().find(|bind_data| bind_data.object_name == id);
-
         let polylist_element = try_some!(mesh_element.get_child("polylist", self.get_ns()));
-
         let positions_input = try_some!(self.get_input(polylist_element, "VERTEX"));
         let positions_array = try_some!(self.get_array_for_input(mesh_element, positions_input));
         let positions: Vec<_> = positions_array.chunks(3).map(|coords| {
@@ -353,6 +348,10 @@ impl ColladaDocument {
         let joint_weights = match self.get_skeletons() {
             Some(skeletons) => {
                 let skeleton = &skeletons[0];
+                // TODO cache bind_data_set
+                let bind_data_set = try_some!(self.get_bind_data_set());
+                let bind_data_opt = bind_data_set.bind_data.iter().find(|bind_data| bind_data.object_name == id);
+
                 if let Some(bind_data) = bind_data_opt {
                     // Build an array of joint weights for each vertex
                     // Initialize joint weights array with no weights for any vertex
