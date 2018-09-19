@@ -585,7 +585,8 @@ fn test_get_obj_set() {
     assert_eq!(obj_set.objects.len(), 1);
 
     let ref object = obj_set.objects[0];
-    assert_eq!(object.name, "BoxyWorm-mesh");
+    assert_eq!(object.id, "BoxyWorm-mesh");
+    assert_eq!(object.name, "BoxyWorm");
     assert_eq!(object.vertices.len(), 16);
     assert_eq!(object.tex_vertices.len(), 84);
     assert_eq!(object.normals.len(), 28);
@@ -611,7 +612,8 @@ fn test_get_obj_set_triangles_geometry() {
     assert_eq!(obj_set.objects.len(), 1);
 
     let ref object = obj_set.objects[0];
-    assert_eq!(object.name, "Cube-mesh");
+    assert_eq!(object.id, "Cube-mesh");
+    assert_eq!(object.name, "Cube");
     assert_eq!(object.vertices.len(), 8);
     assert_eq!(object.normals.len(), 12);
     assert_eq!(object.geometry.len(), 1);
