@@ -318,6 +318,7 @@ impl ColladaDocument {
 
     fn get_object(&self, geometry_element: &xml::Element) -> Option<Object> {
         let id = try_some!(geometry_element.get_attribute("id", None));
+        let name = try_some!(geometry_element.get_attribute("name", None));
         let mesh_element = try_some!(geometry_element.get_child("mesh", self.get_ns()));
         let shapes = try_some!(self.get_shapes(mesh_element));
         let binding_type = try_some!(self.get_geometry_binding_type(mesh_element));
@@ -404,7 +405,8 @@ impl ColladaDocument {
         };
 
         Some(Object {
-            name: id.to_string(),
+            id: id.to_string(),
+            name: name.to_string(),
             vertices: positions,
             tex_vertices: texcoords,
             normals: normals,
