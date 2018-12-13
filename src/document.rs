@@ -2,6 +2,7 @@ use std::fs::File;
 use std::io::Read;
 use std::path::Path;
 use std::str::FromStr;
+use std::collections::HashMap;
 use utils::*;
 use obj::*;
 use xml::Element;
@@ -11,22 +12,6 @@ use vecmath;
 use xml;
 
 use {Animation, BindDataSet, BindData, Skeleton, Joint, VertexWeight, JointIndex, ROOT_JOINT_PARENT_INDEX};
-
-macro_rules! try_some {
-    ($e:expr) => (match $e { Some(s) => s, None => return None })
-}
-
-macro_rules! try_some_with_error {
-    ($e:expr, $msg:expr) => (
-        match $e {
-            Some(s) => s,
-            None => {
-                error!($msg);
-                return None
-            }
-        }
-    )
-}
 
 enum GeometryBindingType {
     Polylist,
@@ -47,6 +32,28 @@ impl GeometryBindingType {
         }
     }
 }
+
+///
+/// Commonly used shading techniques
+/// Holds a description of the textures, samplers, shaders, parameters, and
+/// passes necessary for rendering this effect using one method.
+///
+#[derive(Clone, Debug, PartialEq)]
+pub struct PhongEffect {
+  pub emission: [f32; 4],
+  pub ambient: [f32; 4],
+  pub diffuse: [f32; 4],
+  pub specular: [f32; 4],
+  pub shininess: f32,
+  pub index_of_refraction: f32
+}
+
+// TODO: Add more effect types and then unify them under a technique enum.
+// Lambert
+// Blinn
+// Constant
+//
+
 
 pub struct ColladaDocument {
     pub root_element: xml::Element
@@ -79,6 +86,106 @@ impl ColladaDocument {
         }
     }
 
+    fn get_color(el: &Element) -> Option<[f32; 4]> {
+      let v:Vec<f32> = parse_string_to_vector(el.content_str().as_str());
+      if v.len() == 4 {
+        Some([v[0], v[1], v[2], v[3]])
+      } else {
+        None
+      }
+    }
+
+
+    ///
+    /// Returns the library of effects.
+    /// Current only supports Phong shading.
+    ///
+    pub fn get_effect_library(&self) -> HashMap<String, PhongEffect> {
+      let ns = self.get_ns();
+      let lib_effs = self.root_element.get_child("library_effects", ns)
+        .expect("Could not get library_effects from the document.");
+      lib_effs
+        .get_children("effect", ns)
+        .flat_map(|el:&Element| -> Option<(String, PhongEffect)> {
+          let id = el.get_attribute("id", None)
+            .expect(&format!("effect is missing its id. {:#?}", el));
+          let prof = el.get_child("profile_COMMON", ns)?;
+          let tech = prof.get_child("technique", ns)?;
+          let phong = tech.get_child("phong", ns)?;
+          let emission_color = phong
+            .get_child("emission", ns)
+            .expect("phong is missing emission")
+            .get_child("color", ns)
+            .expect("emission is missing color");
+          let emission = ColladaDocument::get_color(emission_color)
+            .expect("could not get emission color.");
+          let ambient_color = phong
+            .get_child("ambient", ns)
+            .expect("phong is missing ambient")
+            .get_child("color", ns)
+            .expect("ambient is missing color");
+          let ambient = ColladaDocument::get_color(ambient_color)
+            .expect("could not get ambient color.");
+          let diffuse_color = phong
+            .get_child("diffuse", ns)
+            .expect("phong is missing diffuse")
+            .get_child("color", ns)
+            .expect("diffuse is missing color");
+          let diffuse = ColladaDocument::get_color(diffuse_color)
+            .expect("could not get diffuse color.");
+          let specular_color = phong
+            .get_child("specular", ns)
+            .expect("phong is missing specular")
+            .get_child("color", ns)
+            .expect("specular is missing color");
+          let specular = ColladaDocument::get_color(specular_color)
+            .expect("could not get specular color.");
+          let shininess:f32 = phong
+            .get_child("shininess", ns)
+            .expect("phong is missing shininess")
+            .get_child("float", ns)
+            .expect("shininess is missing float")
+            .content_str().as_str()
+            .parse().ok().expect("could not parse shininess");
+          let index_of_refraction:f32 = phong
+            .get_child("index_of_refraction", ns)
+            .expect("phong is missing index_of_refraction")
+            .get_child("float", ns)
+            .expect("index_of_refraction is missing float")
+            .content_str().as_str()
+            .parse().ok().expect("could not parse index_of_refraction");
+          Some(
+            (id.to_string(), PhongEffect {
+              emission, ambient, diffuse, specular, shininess, index_of_refraction
+            })
+          )
+        })
+        .collect()
+    }
+
+    pub fn get_material_to_effect(&self) -> HashMap<String, String> {
+      let ns = self.get_ns();
+      let lib_mats = self.root_element.get_child("library_materials", ns)
+        .expect("Could not get library_materials from the document");
+      lib_mats
+        .get_children("material", ns)
+        .flat_map(|el| {
+          let id = el.get_attribute("id", None)
+            .expect(&format!("material is missing its id. {:#?}", el));
+          let mut url:String = el
+            .get_child("instance_effect", ns).expect("could not get material instance_effect")
+            .get_attribute("url", None).expect("could not get material instance_effect url attribute")
+            .to_string();
+          if url.remove(0) == '#' {
+            Some((id.to_string(), url))
+          } else {
+            None
+          }
+        })
+        .collect()
+    }
+
+
     ///
     /// Return a vector of all Animations in the Collada document
     ///
@@ -99,58 +206,51 @@ impl ColladaDocument {
     ///
     fn get_animation(&self, animation_element: &Element) -> Option<Animation> {
 
-        let channel_element = try_some_with_error!(
-            animation_element.get_child("channel", self.get_ns()),
-            "Missing channel element in animation element"
-        );
+      let channel_element = animation_element
+        .get_child("channel", self.get_ns())
+        .expect("Missing channel element in animation element");
 
-        let target = try_some_with_error!(
-            channel_element.get_attribute("target", None),
-            "Missing target attribute in animation channel element"
-        );
+      let target = channel_element
+        .get_attribute("target", None)
+        .expect("Missing target attribute in animation channel element");
 
-        let sampler_element = try_some_with_error!(
-            animation_element.get_child("sampler", self.get_ns()),
-            "Missing sampler element in animation element"
-        );
+      let sampler_element = animation_element
+        .get_child("sampler", self.get_ns())
+        .expect("Missing sampler element in animation element");
 
-        // Note: Assuming INPUT for animation is 'time'
-        let time_input = try_some_with_error!(
-            self.get_input(sampler_element, "INPUT"),
-            "Missing input element for animation INPUT (sample time)"
-        );
+      // Note: Assuming INPUT for animation is 'time'
+      let time_input = self
+        .get_input(sampler_element, "INPUT")
+        .expect("Missing input element for animation INPUT (sample time)");
 
-        let sample_times = try_some_with_error!(
-            self.get_array_for_input(animation_element, time_input),
-            "Missing / invalid source for animation INPUT"
-        );
+      let sample_times = self
+        .get_array_for_input(animation_element, time_input)
+        .expect("Missing / invalid source for animation INPUT");
 
-        // Note: Assuming OUTPUT for animation is a pose matrix
-        let pose_input = try_some_with_error!(
-            self.get_input(sampler_element, "OUTPUT"),
-            "Missing input element for animation OUTPUT (pose transform)"
-        );
+      // Note: Assuming OUTPUT for animation is a pose matrix
+      let pose_input = self
+        .get_input(sampler_element, "OUTPUT")
+        .expect("Missing input element for animation OUTPUT (pose transform)");
 
-        let sample_poses_flat = try_some_with_error!(
-            self.get_array_for_input(animation_element, pose_input),
-            "Missing / invalid source for animation OUTPUT"
-        );
+      let sample_poses_flat = self
+        .get_array_for_input(animation_element, pose_input)
+        .expect("Missing / invalid source for animation OUTPUT");
 
-        // Convert flat array of floats into array of matrices
-        let sample_poses = to_matrix_array(sample_poses_flat);
+      // Convert flat array of floats into array of matrices
+      let sample_poses = to_matrix_array(sample_poses_flat);
 
-        Some(Animation {
-            target: target.to_string(),
-            sample_times: sample_times,
-            sample_poses: sample_poses
-        })
+      Some(Animation {
+        target: target.to_string(),
+        sample_times: sample_times,
+        sample_poses: sample_poses
+      })
     }
 
     ///
     /// Populate and return an ObjSet for the meshes in the Collada document
     ///
     pub fn get_obj_set(&self) -> Option<ObjSet> {
-        let library_geometries = try_some!(self.root_element.get_child("library_geometries", self.get_ns()));
+        let library_geometries = (self.root_element.get_child("library_geometries", self.get_ns()))?;
         let geometries = library_geometries.get_children("geometry", self.get_ns());
         let objects = geometries.filter_map( |g| { self.get_object(g) }).collect();
 
@@ -164,7 +264,7 @@ impl ColladaDocument {
     /// Populate and return a BindDataSet from the Collada document
     ///
     pub fn get_bind_data_set(&self) -> Option<BindDataSet> {
-        let library_controllers = try_some!(self.root_element.get_child("library_controllers", self.get_ns()));
+        let library_controllers = (self.root_element.get_child("library_controllers", self.get_ns()))?;
         let controllers = library_controllers.get_children("controller", self.get_ns());
         let bind_data = controllers.filter_map( |c| { self.get_bind_data(c) }).collect();
         Some(BindDataSet{ bind_data: bind_data })
@@ -174,10 +274,10 @@ impl ColladaDocument {
     ///
     ///
     pub fn get_skeletons(&self) -> Option<Vec<Skeleton>> {
-        let library_visual_scenes = try_some!(self.root_element.get_child("library_visual_scenes", self.get_ns()));
-        let visual_scene = try_some!(library_visual_scenes.get_child("visual_scene", self.get_ns()));
+        let library_visual_scenes = (self.root_element.get_child("library_visual_scenes", self.get_ns()))?;
+        let visual_scene = (library_visual_scenes.get_child("visual_scene", self.get_ns()))?;
 
-        let bind_data_set = try_some!(self.get_bind_data_set());
+        let bind_data_set = (self.get_bind_data_set())?;
 
         let skeleton_ids: Vec<&str> = pre_order_iter(visual_scene)
             .filter(|e| e.name == "skeleton")
@@ -228,8 +328,8 @@ impl ColladaDocument {
                 parent_index: *parent_index_stack.last().unwrap(),
             });
 
-            let pose_matrix_element = try_some!(joint_element.get_child("matrix", self.get_ns()));
-            let pose_matrix_array = try_some!(get_array_content(pose_matrix_element));
+            let pose_matrix_element = (joint_element.get_child("matrix", self.get_ns()))?;
+            let pose_matrix_array = (get_array_content(pose_matrix_element))?;
             let mut pose_matrix = vecmath::mat4_id();
             for (&array_value, matrix_value) in pose_matrix_array.iter().zip(pose_matrix.iter_mut().flat_map(|n| n.iter_mut())) {
                 *matrix_value = array_value;
@@ -248,25 +348,25 @@ impl ColladaDocument {
 
     fn get_bind_data(&self, controller_element: &xml::Element) -> Option<BindData> {
 
-        let skeleton_name = try_some!(controller_element.get_attribute("name", None));
-        let skin_element = try_some!(controller_element.get_child("skin", self.get_ns()));
-        let object_name = try_some!(skin_element.get_attribute("source", None)).trim_left_matches('#');
+        let skeleton_name = controller_element.get_attribute("name", None)?;
+        let skin_element = controller_element.get_child("skin", self.get_ns())?;
+        let object_name = skin_element.get_attribute("source", None)?.trim_left_matches('#');
 
-        let vertex_weights_element = try_some!(skin_element.get_child("vertex_weights", self.get_ns()));
-        let vertex_weights = try_some!(self.get_vertex_weights(vertex_weights_element));
+        let vertex_weights_element = (skin_element.get_child("vertex_weights", self.get_ns()))?;
+        let vertex_weights = (self.get_vertex_weights(vertex_weights_element))?;
 
-        let joints_element = try_some!(skin_element.get_child("joints", self.get_ns()));
+        let joints_element = (skin_element.get_child("joints", self.get_ns()))?;
 
-        let joint_input = try_some!(self.get_input(joints_element, "JOINT"));
-        let joint_names = try_some!(self.get_array_for_input(skin_element, joint_input));
+        let joint_input = (self.get_input(joints_element, "JOINT"))?;
+        let joint_names = (self.get_array_for_input(skin_element, joint_input))?;
 
-        let weights_input = try_some!(self.get_input(vertex_weights_element, "WEIGHT"));
-        let weights = try_some!(self.get_array_for_input(skin_element, weights_input));
+        let weights_input = (self.get_input(vertex_weights_element, "WEIGHT"))?;
+        let weights = (self.get_array_for_input(skin_element, weights_input))?;
 
-        let inv_bind_matrix_input = try_some!(self.get_input(joints_element, "INV_BIND_MATRIX"));
+        let inv_bind_matrix_input = (self.get_input(joints_element, "INV_BIND_MATRIX"))?;
 
         let inverse_bind_poses = to_matrix_array(
-            try_some!(self.get_array_for_input(skin_element, inv_bind_matrix_input))
+            (self.get_array_for_input(skin_element, inv_bind_matrix_input))?
         );
 
         Some(BindData{
@@ -281,15 +381,15 @@ impl ColladaDocument {
 
     fn get_vertex_weights(&self, vertex_weights_element: &xml::Element) -> Option<Vec<VertexWeight>> {
 
-        let joint_index_offset = try_some!(self.get_input_offset(vertex_weights_element, "JOINT"));
-        let weight_index_offset = try_some!(self.get_input_offset(vertex_weights_element, "WEIGHT"));
+        let joint_index_offset = (self.get_input_offset(vertex_weights_element, "JOINT"))?;
+        let weight_index_offset = (self.get_input_offset(vertex_weights_element, "WEIGHT"))?;
 
-        let vcount_element = try_some!(vertex_weights_element.get_child("vcount", self.get_ns()));
-        let weights_per_vertex: Vec<usize> = try_some!(get_array_content(vcount_element));
+        let vcount_element = (vertex_weights_element.get_child("vcount", self.get_ns()))?;
+        let weights_per_vertex: Vec<usize> = (get_array_content(vcount_element))?;
         let input_count = vertex_weights_element.get_children("input", self.get_ns()).count();
 
-        let v_element = try_some!(vertex_weights_element.get_child("v", self.get_ns()));
-        let joint_weight_indices: Vec<usize> = try_some!(get_array_content(v_element));
+        let v_element = (vertex_weights_element.get_child("v", self.get_ns()))?;
+        let joint_weight_indices: Vec<usize> = (get_array_content(v_element))?;
         let mut joint_weight_iter = joint_weight_indices.chunks(input_count);
 
         let mut vertex_indices: Vec<usize> = Vec::new();
@@ -317,15 +417,23 @@ impl ColladaDocument {
     }
 
     fn get_object(&self, geometry_element: &xml::Element) -> Option<Object> {
-        let id = try_some!(geometry_element.get_attribute("id", None));
-        let name = try_some!(geometry_element.get_attribute("name", None));
-        let mesh_element = try_some!(geometry_element.get_child("mesh", self.get_ns()));
-        let shapes = try_some!(self.get_shapes(mesh_element));
-        let binding_type = try_some!(self.get_geometry_binding_type(mesh_element));
+        let id = (geometry_element.get_attribute("id", None))?;
+        let name = (geometry_element.get_attribute("name", None))?;
+        let mesh_element = (geometry_element.get_child("mesh", self.get_ns()))?;
+        let mesh = (self.get_mesh_elements(mesh_element))?;
+        //let binding_type = (self.get_geometry_binding_type(mesh_element))?;
 
-        let polylist_element = try_some!(mesh_element.get_child(binding_type.name(), self.get_ns()));
-        let positions_input = try_some!(self.get_input(polylist_element, "VERTEX"));
-        let positions_array = try_some!(self.get_array_for_input(mesh_element, positions_input));
+        let mut first_primitive_element = None;
+        'find_primitive: for t in [GeometryBindingType::Polylist, GeometryBindingType::Triangles].iter() {
+          first_primitive_element = mesh_element.get_child(t.name(), self.get_ns());
+          if first_primitive_element.is_some() {
+            break 'find_primitive;
+          }
+        }
+        let first_primitive_element = first_primitive_element?;
+
+        let positions_input = (self.get_input(first_primitive_element, "VERTEX"))?;
+        let positions_array = (self.get_array_for_input(mesh_element, positions_input))?;
         let positions: Vec<_> = positions_array.chunks(3).map(|coords| {
             Vertex {
                 x: coords[0],
@@ -335,9 +443,9 @@ impl ColladaDocument {
         }).collect();
 
         let normals = {
-            match self.get_input(polylist_element, "NORMAL") {
+            match self.get_input(first_primitive_element, "NORMAL") {
                 Some(normals_input) => {
-                    let normals_array = try_some!(self.get_array_for_input(mesh_element, normals_input));
+                    let normals_array = (self.get_array_for_input(mesh_element, normals_input))?;
                     normals_array.chunks(3).map(|coords| {
                         Normal {
                             x: coords[0],
@@ -351,9 +459,9 @@ impl ColladaDocument {
         };
 
         let texcoords = {
-            match self.get_input(polylist_element, "TEXCOORD") {
+            match self.get_input(first_primitive_element, "TEXCOORD") {
                 Some(texcoords_input) => {
-                    let texcoords_array = try_some!(self.get_array_for_input(mesh_element, texcoords_input));
+                    let texcoords_array = (self.get_array_for_input(mesh_element, texcoords_input))?;
                     texcoords_array.chunks(2).map(|coords| {
                         TVertex {
                             x: coords[0],
@@ -371,7 +479,7 @@ impl ColladaDocument {
             Some(skeletons) => {
                 let skeleton = &skeletons[0];
                 // TODO cache bind_data_set
-                let bind_data_set = try_some!(self.get_bind_data_set());
+                let bind_data_set = (self.get_bind_data_set())?;
                 let bind_data_opt = bind_data_set.bind_data.iter().find(|bind_data| bind_data.object_name == id);
 
                 if let Some(bind_data) = bind_data_opt {
@@ -412,9 +520,8 @@ impl ColladaDocument {
             normals: normals,
             joint_weights: joint_weights,
             geometry: vec![Geometry {
-                material_name: None,
                 smooth_shading_group: 0,
-                shapes: shapes,
+                mesh: mesh,
             }],
         })
     }
@@ -428,16 +535,21 @@ impl ColladaDocument {
 
     fn get_input_offset(&self, parent_element: &xml::Element, semantic : &str) -> Option<usize> {
         let mut inputs = parent_element.get_children("input", self.get_ns());
-        let input = try_some!(inputs.find( |i| {
+        let input:&Element = inputs.find( |i| {
             if let Some(s) = i.get_attribute("semantic", None) {
                 s == semantic
             } else {
                 false
             }
-        }));
-        try_some!(input.get_attribute("offset", None)).parse::<usize>().ok()
+        })?;
+      input
+        .get_attribute("offset", None)
+        .expect("input is missing offest")
+        .parse::<usize>()
+        .ok()
     }
 
+  ///
     fn get_input<'a>(&'a self, parent: &'a Element, semantic : &str) -> Option<&'a Element> {
         let mut inputs = parent.get_children("input", self.get_ns());
         match inputs.find( |i| {
@@ -450,7 +562,7 @@ impl ColladaDocument {
     }
 
     fn get_input_source<'a>(&'a self, parent_element: &'a xml::Element, input_element: &'a xml::Element) -> Option<&'a xml::Element> {
-        let source_id = try_some!(input_element.get_attribute("source", None));
+        let source_id = (input_element.get_attribute("source", None))?;
 
         if let Some(element) = parent_element.children.iter()
             .filter_map(|node| { if let &xml::Xml::ElementNode(ref e) = node { Some(e) } else { None } })
@@ -466,7 +578,7 @@ impl ColladaDocument {
             if element.name == "source" {
                 return Some(element);
             } else {
-                let input = try_some!(element.get_child("input", self.get_ns()));
+                let input = (element.get_child("input", self.get_ns()))?;
                 return self.get_input_source(parent_element, input);
             }
         }
@@ -474,8 +586,8 @@ impl ColladaDocument {
     }
 
     fn get_array_for_input<T: FromStr>(&self, parent: &Element, input: &Element) -> Option<Vec<T>> {
-        let source = try_some!(self.get_input_source(parent, input));
-        let array_element = try_some!{
+        let source = (self.get_input_source(parent, input))?;
+        let array_element = (
             if let Some(float_array) = source.get_child("float_array", self.get_ns()) {
                 Some(float_array)
             } else if let Some(name_array) = source.get_child("Name_array", self.get_ns()) {
@@ -483,22 +595,20 @@ impl ColladaDocument {
             } else {
                 None
             }
-        };
+        )?;
         get_array_content(array_element)
     }
 
-    fn get_vtn_indices(&self, mesh_element: &xml::Element, bind_type: GeometryBindingType) -> Option<Vec<VTNIndex>> {
+    fn get_vtn_indices(&self, prim_element: &xml::Element) -> Option<Vec<VTNIndex>> {
+        let p_element = (prim_element.get_child("p", self.get_ns()))?;
+        let indices: Vec<usize> = (get_array_content(p_element))?;
 
-        let bind_element = try_some!(mesh_element.get_child(bind_type.name(), self.get_ns()));
-        let p_element = try_some!(bind_element.get_child("p", self.get_ns()));
-        let indices: Vec<usize> = try_some!(get_array_content(p_element));
+        let input_count = prim_element.get_children("input", self.get_ns()).count();
 
-        let input_count = bind_element.get_children("input", self.get_ns()).count();
+        let position_offset = (self.get_input_offset(prim_element, "VERTEX"))?;
 
-        let position_offset = try_some!(self.get_input_offset(bind_element, "VERTEX"));
-
-        let normal_offset_opt = self.get_input_offset(bind_element, "NORMAL");
-        let texcoord_offset_opt = self.get_input_offset(bind_element, "TEXCOORD");
+        let normal_offset_opt = self.get_input_offset(prim_element, "NORMAL");
+        let texcoord_offset_opt = self.get_input_offset(prim_element, "TEXCOORD");
 
         let vtn_indices: Vec<VTNIndex> = indices.chunks(input_count).map( |indices| {
             let position_index = indices[position_offset];
@@ -519,44 +629,76 @@ impl ColladaDocument {
         Some(vtn_indices)
     }
 
-    fn get_geometry_binding_type(&self, mesh_element: &xml::Element) -> Option<GeometryBindingType> {
-        if mesh_element.get_child(GeometryBindingType::Polylist.name(), self.get_ns()).is_some() {
-            return Some(GeometryBindingType::Polylist)
+  fn get_material(&self, primitive_el: &xml::Element) -> Option<String> {
+    primitive_el
+      .get_attribute("material", None)
+      .map(|s| s.to_string())
+  }
+
+    //fn get_geometry_binding_type(&self, mesh_element: &xml::Element) -> Option<GeometryBindingType> {
+    //    if mesh_element.get_child(GeometryBindingType::Polylist.name(), self.get_ns()).is_some() {
+    //        return Some(GeometryBindingType::Polylist)
+    //    }
+    //    if mesh_element.get_child(GeometryBindingType::Triangles.name(), self.get_ns()).is_some() {
+    //        return Some(GeometryBindingType::Triangles)
+    //    }
+    //    None
+    //}
+
+    fn get_mesh_elements(&self, mesh_element: &xml::Element) -> Option<Vec<PrimitiveElement>> {
+      let mut prims = vec![];
+      for child in &mesh_element.children {
+        match child {
+          xml::Xml::ElementNode(el) => {
+            if el.name == GeometryBindingType::Polylist.name() {
+              let shapes = self
+                .get_polylist_shape(&el)
+                .expect("Polylist had no shapes.");
+              let material = self.get_material(&el);
+              let polylist = Polylist {
+                shapes, material
+              };
+              prims.push(PrimitiveElement::Polylist(polylist))
+            } else if el.name == GeometryBindingType::Triangles.name() {
+              let vertices = self
+                .get_triangles(&el)
+                .expect("Triangles had no indices.");
+              let material = self.get_material(&el);
+              let polylist = Triangles {
+                vertices, material
+              };
+              prims.push(PrimitiveElement::Triangles(polylist))
+            }
+          }
+          _ => {}
         }
-        if mesh_element.get_child(GeometryBindingType::Triangles.name(), self.get_ns()).is_some() {
-            return Some(GeometryBindingType::Triangles)
-        }
+      }
+
+      if prims.is_empty() {
         None
+      } else {
+        Some(prims)
+      }
     }
 
-    fn get_shapes(&self, mesh_element: &xml::Element) -> Option<Vec<Shape>> {
-        match self.get_geometry_binding_type(mesh_element) {
-            Some(GeometryBindingType::Polylist) => self.get_polylist_shape(mesh_element),
-            Some(GeometryBindingType::Triangles) => self.get_triangles_shape(mesh_element),
-            _ => None,
-        }
-    }
-
-    fn get_triangles_shape(&self, mesh_element: &xml::Element) -> Option<Vec<Shape>> {
-        let vtn_indices = try_some!(self.get_vtn_indices(mesh_element, GeometryBindingType::Triangles));
-
-        let triangles = try_some!(mesh_element.get_child(GeometryBindingType::Triangles.name(), self.get_ns()));
-        let count = try_some!(triangles.get_attribute("count", None)).parse::<usize>().ok().unwrap();
+    fn get_triangles(&self, triangles: &xml::Element) -> Option<Vec<(VTNIndex, VTNIndex, VTNIndex)>> {
+        let vtn_indices = (self.get_vtn_indices(triangles))?;
+        let count_str:&str = triangles.get_attribute("count", None)?;
+        let count = count_str.parse::<usize>().ok().unwrap();
 
         let mut vtn_iter = vtn_indices.iter();
         let shapes = (0..count).map(|_| {
-            Shape::Triangle(*vtn_iter.next().unwrap(), *vtn_iter.next().unwrap(), *vtn_iter.next().unwrap())
+            (*vtn_iter.next().unwrap(), *vtn_iter.next().unwrap(), *vtn_iter.next().unwrap())
         }).collect();
 
         Some(shapes)
     }
 
-    fn get_polylist_shape(&self, mesh_element: &xml::Element) -> Option<Vec<Shape>> {
-        let vtn_indices = try_some!(self.get_vtn_indices(mesh_element, GeometryBindingType::Polylist));
+    fn get_polylist_shape(&self, polylist_element: &xml::Element) -> Option<Vec<Shape>> {
+        let vtn_indices = (self.get_vtn_indices(polylist_element))?;
 
-        let polylist_element = try_some!(mesh_element.get_child(GeometryBindingType::Polylist.name(), self.get_ns()));
-        let vcount_element = try_some!(polylist_element.get_child("vcount", self.get_ns()));
-        let vertex_counts: Vec<usize> = try_some!(get_array_content(vcount_element));
+        let vcount_element = (polylist_element.get_child("vcount", self.get_ns()))?;
+        let vertex_counts: Vec<usize> = (get_array_content(vcount_element))?;
 
         let mut vtn_iter = vtn_indices.iter();
         let shapes = vertex_counts.iter().map(|vertex_count| {
@@ -593,15 +735,18 @@ fn test_get_obj_set() {
     assert_eq!(object.geometry.len(), 1);
 
     let ref geometry = object.geometry[0];
-    assert_eq!(geometry.shapes.len(), 28);
 
-    let ref shape = geometry.shapes[1];
-    if let &Shape::Triangle((position_index, Some(texture_index), Some(normal_index)), _, _) = shape {
-        assert_eq!(position_index, 7);
-        assert_eq!(texture_index, 3);
-        assert_eq!(normal_index, 1);
-    } else {
-        assert!(false);
+    let ref prim = geometry.mesh[0];
+    if let PrimitiveElement::Polylist(polylist) = prim {
+      assert_eq!(polylist.shapes.len(), 28);
+      let ref shape = polylist.shapes[1];
+      if let &Shape::Triangle((position_index, Some(texture_index), Some(normal_index)), _, _) = shape {
+          assert_eq!(position_index, 7);
+          assert_eq!(texture_index, 3);
+          assert_eq!(normal_index, 1);
+      } else {
+          assert!(false);
+      }
     }
 }
 
@@ -619,14 +764,21 @@ fn test_get_obj_set_triangles_geometry() {
     assert_eq!(object.geometry.len(), 1);
 
     let ref geometry = object.geometry[0];
-    assert_eq!(geometry.shapes.len(), 12);
 
-    let ref shape = geometry.shapes[1];
-    if let &Shape::Triangle((position_index, _, Some(normal_index)), _, _) = shape {
-        assert_eq!(position_index, 7);
-        assert_eq!(normal_index, 1);
-    } else {
-        assert!(false);
+    let ref prim = geometry.mesh[0];
+    match prim  {
+      PrimitiveElement::Triangles(triangles) => {
+        assert_eq!(triangles.vertices.len(), 12);
+        if let ((position_index, _, Some(normal_index)), _, _) = triangles.vertices[1] {
+          assert_eq!(position_index, 7);
+          assert_eq!(normal_index, 1);
+        } else {
+          assert!(false, "Triangle is missing a normal.");
+        }
+      }
+      x => {
+        assert!(false, "Not a polylist: {:#?}", x);
+      }
     }
 }
 
