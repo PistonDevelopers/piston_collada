@@ -10,6 +10,7 @@ pub struct ObjSet {
   pub objects: Vec<Object>,
 }
 
+
 /// A mesh object.
 #[derive(Clone, Debug)]
 pub struct Object {
@@ -33,18 +34,27 @@ pub struct Object {
   pub geometry: Vec<Geometry>,
 }
 
+
 /// A set of shapes, all using the given material.
 #[derive(Clone, Debug)]
 pub struct Geometry {
-  /// A reference to the material to apply to this geometry.
-  pub material_name: Option<String>,
   /// Should we use smooth shading when rendering this?
   pub smooth_shading_group: usize,
   /// The shapes of which this geometry is composed.
-  pub shapes: Vec<Shape>,
+  pub mesh: Vec<PrimitiveElement>,
 }
 
-/// The various shapes supported by this library.
+
+#[derive(Clone, Debug)]
+pub struct Triangles {
+  /// The vertices of the triangles.
+  pub vertices: Vec<(VTNIndex, VTNIndex, VTNIndex)>,
+  /// The material of the polylist. Optional.
+  pub material: Option<String>,
+}
+
+
+/// The various shapes supported by this library that can be found in a Polylist.
 ///
 /// Convex polygons more complicated than a triangle are automatically
 /// converted into triangles.
@@ -58,6 +68,32 @@ pub enum Shape {
   Triangle(VTNIndex, VTNIndex, VTNIndex),
 }
 
+
+/// Provides the information needed for a mesh to bind vertex attributes
+/// together and then organize those vertices into individual polygons.
+#[derive(Clone, Debug)]
+pub struct Polylist {
+  /// The shapes in this polylist.
+  pub shapes: Vec<Shape>,
+  /// The material of the polylist. Optional.
+  pub material: Option<String>,
+}
+
+
+/// Geometric primitives, which assemble values from the inputs into vertex
+/// attribute data.
+#[derive(Clone, Debug)]
+pub enum PrimitiveElement {
+  // Lines,
+  // LineStrips,
+  // Polygons,
+  Polylist(Polylist),
+  Triangles(Triangles),
+  // Trifans,
+  // Tristrips,
+}
+
+
 /// A single 3-dimensional point on the corner of an object.
 #[allow(missing_docs)]
 #[derive(Clone, Copy, Debug)]
@@ -66,6 +102,7 @@ pub struct Vertex {
   pub y: f64,
   pub z: f64,
 }
+
 
 /// Represents the weights of any joints that should
 /// control the vertex with skinned animation
