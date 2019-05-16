@@ -603,7 +603,13 @@ impl ColladaDocument {
         let p_element = (prim_element.get_child("p", self.get_ns()))?;
         let indices: Vec<usize> = (get_array_content(p_element))?;
 
-        let input_count = prim_element.get_children("input", self.get_ns()).count();
+        let input_count = prim_element.get_children("input", self.get_ns())
+          .filter(|c| if let Some(set) = c.get_attribute("set", None) {
+            return set == "0"
+          } else {
+            true
+          })
+          .count();
 
         let position_offset = (self.get_input_offset(prim_element, "VERTEX"))?;
 
