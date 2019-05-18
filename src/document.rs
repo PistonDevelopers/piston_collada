@@ -80,6 +80,13 @@ impl ColladaDocument {
             Err(_) => return Err("Failed to read COLLADA file.")
         };
 
+        ColladaDocument::from_str(&xml_string)
+    }
+
+    ///
+    /// Construct a ColladaDocument from an XML string
+    ///
+    pub fn from_str(xml_string: &str) -> Result<ColladaDocument, &'static str> {
         match xml_string.parse() {
             Ok(root_element) => Ok(ColladaDocument{root_element: root_element}),
             Err(_) => Err("Error while parsing COLLADA document."),
