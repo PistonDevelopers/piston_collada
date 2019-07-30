@@ -10,7 +10,6 @@ pub struct ObjSet {
   pub objects: Vec<Object>,
 }
 
-
 /// A mesh object.
 #[derive(Clone, Debug)]
 pub struct Object {
@@ -24,16 +23,15 @@ pub struct Object {
   /// length of 'vertices' if present
   pub joint_weights: Vec<JointWeights>,
   /// The set of texture vertices referenced by this object. The actual
-  /// vertices are indexed by the second element in a `VTNIndex`.
+  /// vertices are indexed by a `PrimitiveElement`.
   pub tex_vertices: Vec<TVertex>,
-  /// The set of normals referenced by this object. This are are referenced
-  /// by the third element in a `VTNIndex`.
+  /// The set of normals referenced by this object. The actual normals are
+  /// indexed by a `PrimitiveElement`.
   pub normals: Vec<Normal>,
   /// A set of shapes (with materials applied to them) of which this object is
   /// composed.
   pub geometry: Vec<Geometry>,
 }
-
 
 /// A set of shapes, all using the given material.
 #[derive(Clone, Debug)]
@@ -44,15 +42,17 @@ pub struct Geometry {
   pub mesh: Vec<PrimitiveElement>,
 }
 
-
 #[derive(Clone, Debug)]
 pub struct Triangles {
-  /// The vertices of the triangles.
-  pub vertices: Vec<(VTNIndex, VTNIndex, VTNIndex)>,
+  /// The vertex indices of the triangles.
+  pub vertices: Vec<(VertexIndex, VertexIndex, VertexIndex)>,
+  /// The texture vertex indices of the triangles.
+  pub tex_vertices: Option<Vec<(TextureIndex, TextureIndex, TextureIndex)>>,
+  /// The normal indices of the triangles.
+  pub normals: Option<Vec<(NormalIndex, NormalIndex, NormalIndex)>>,
   /// The material of the polylist. Optional.
   pub material: Option<String>,
 }
-
 
 /// The various shapes supported by this library that can be found in a Polylist.
 ///
@@ -68,7 +68,6 @@ pub enum Shape {
   Triangle(VTNIndex, VTNIndex, VTNIndex),
 }
 
-
 /// Provides the information needed for a mesh to bind vertex attributes
 /// together and then organize those vertices into individual polygons.
 #[derive(Clone, Debug)]
@@ -78,7 +77,6 @@ pub struct Polylist {
   /// The material of the polylist. Optional.
   pub material: Option<String>,
 }
-
 
 /// Geometric primitives, which assemble values from the inputs into vertex
 /// attribute data.
@@ -93,7 +91,6 @@ pub enum PrimitiveElement {
   // Tristrips,
 }
 
-
 /// A single 3-dimensional point on the corner of an object.
 #[allow(missing_docs)]
 #[derive(Clone, Copy, Debug)]
@@ -102,7 +99,6 @@ pub struct Vertex {
   pub y: f64,
   pub z: f64,
 }
-
 
 /// Represents the weights of any joints that should
 /// control the vertex with skinned animation

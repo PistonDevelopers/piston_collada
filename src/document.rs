@@ -606,6 +606,78 @@ impl ColladaDocument {
         get_array_content(array_element)
     }
 
+    fn get_vertex_indices(&self, prim_element: &xml::Element) -> Option<Vec<VertexIndex>> {
+        let p_element = (prim_element.get_child("p", self.get_ns()))?;
+        let indices: Vec<usize> = (get_array_content(p_element))?;
+
+        let input_count = prim_element
+            .get_children("input", self.get_ns())
+            .filter(|c| {
+                if let Some(set) = c.get_attribute("set", None) {
+                    return set == "0";
+                } else {
+                    true
+                }
+            })
+            .count();
+
+        let vertex_offset = (self.get_input_offset(prim_element, "VERTEX"))?;
+        let vertex_indices = indices
+            .chunks(input_count)
+            .map(|indices| indices[vertex_offset])
+            .collect();
+
+        Some(vertex_indices)
+    }
+
+    fn get_normal_indices(&self, prim_element: &xml::Element) -> Option<Vec<NormalIndex>> {
+        let p_element = (prim_element.get_child("p", self.get_ns()))?;
+        let indices: Vec<usize> = (get_array_content(p_element))?;
+
+        let input_count = prim_element
+            .get_children("input", self.get_ns())
+            .filter(|c| {
+                if let Some(set) = c.get_attribute("set", None) {
+                    return set == "0";
+                } else {
+                    true
+                }
+            })
+            .count();
+
+        self.get_input_offset(prim_element, "NORMAL")
+            .map(|normal_offset| {
+                indices
+                    .chunks(input_count)
+                    .map(|indices| indices[normal_offset])
+                    .collect()
+            })
+    }
+
+    fn get_texcoord_indices(&self, prim_element: &xml::Element) -> Option<Vec<TextureIndex>> {
+        let p_element = (prim_element.get_child("p", self.get_ns()))?;
+        let indices: Vec<usize> = (get_array_content(p_element))?;
+
+        let input_count = prim_element
+            .get_children("input", self.get_ns())
+            .filter(|c| {
+                if let Some(set) = c.get_attribute("set", None) {
+                    return set == "0";
+                } else {
+                    true
+                }
+            })
+            .count();
+
+        self.get_input_offset(prim_element, "TEXCOORD")
+            .map(|texcoord_offset| {
+                indices
+                    .chunks(input_count)
+                    .map(|indices| indices[texcoord_offset])
+                    .collect()
+            })
+    }
+
     fn get_vtn_indices(&self, prim_element: &xml::Element) -> Option<Vec<VTNIndex>> {
         let p_element = (prim_element.get_child("p", self.get_ns()))?;
         let indices: Vec<usize> = (get_array_content(p_element))?;
@@ -673,14 +745,11 @@ impl ColladaDocument {
               };
               prims.push(PrimitiveElement::Polylist(polylist))
             } else if el.name == GeometryBindingType::Triangles.name() {
-              let vertices = self
-                .get_triangles(&el)
-                .expect("Triangles had no indices.");
               let material = self.get_material(&el);
-              let polylist = Triangles {
-                vertices, material
-              };
-              prims.push(PrimitiveElement::Triangles(polylist))
+              let triangles = self
+                .get_triangles(&el, material)
+                .expect("Triangles had no indices.");
+              prims.push(PrimitiveElement::Triangles(triangles))
             }
           }
           _ => {}
@@ -694,17 +763,37 @@ impl ColladaDocument {
       }
     }
 
-    fn get_triangles(&self, triangles: &xml::Element) -> Option<Vec<(VTNIndex, VTNIndex, VTNIndex)>> {
-        let vtn_indices = (self.get_vtn_indices(triangles))?;
+    fn get_triangles(&self, triangles: &xml::Element, material: Option<String>) -> Option<Triangles> {
         let count_str:&str = triangles.get_attribute("count", None)?;
         let count = count_str.parse::<usize>().ok().unwrap();
+        
+        let vertices = self.get_vertex_indices(triangles).map(|vertex_indices| {
+            let mut vertex_iter = vertex_indices.iter();
+            (0..count).map(|_| {
+                (*vertex_iter.next().unwrap(), *vertex_iter.next().unwrap(), *vertex_iter.next().unwrap())
+            }).collect()
+        })?;
 
-        let mut vtn_iter = vtn_indices.iter();
-        let shapes = (0..count).map(|_| {
-            (*vtn_iter.next().unwrap(), *vtn_iter.next().unwrap(), *vtn_iter.next().unwrap())
-        }).collect();
+        let tex_vertices = self.get_texcoord_indices(triangles).map(|texcoord_indices| {
+            let mut texcoord_iter = texcoord_indices.iter();
+            (0..count).map(|_| {
+                (*texcoord_iter.next().unwrap(), *texcoord_iter.next().unwrap(), *texcoord_iter.next().unwrap())
+            }).collect()
+        });
 
-        Some(shapes)
+        let normals = self.get_normal_indices(triangles).map(|normal_indices| {
+            let mut normal_iter = normal_indices.iter();
+            (0..count).map(|_| {
+                (*normal_iter.next().unwrap(), *normal_iter.next().unwrap(), *normal_iter.next().unwrap())
+            }).collect()
+        });
+        
+        Some(Triangles {
+            vertices,
+            tex_vertices,
+            normals,
+            material
+        })
     }
 
     fn get_polylist_shape(&self, polylist_element: &xml::Element) -> Option<Vec<Shape>> {
@@ -782,8 +871,14 @@ fn test_get_obj_set_triangles_geometry() {
     match prim  {
       PrimitiveElement::Triangles(triangles) => {
         assert_eq!(triangles.vertices.len(), 12);
-        if let ((position_index, _, Some(normal_index)), _, _) = triangles.vertices[1] {
-          assert_eq!(position_index, 7);
+
+        let position_index = triangles.vertices[1].0;
+        assert_eq!(position_index, 7);
+
+        if let Some(ref normals) = triangles.normals {
+          assert_eq!(normals.len(), 12);
+          
+          let normal_index = normals[1].0;
           assert_eq!(normal_index, 1);
         } else {
           assert!(false, "Triangle is missing a normal.");
