@@ -896,7 +896,7 @@ fn test_get_bind_data_set() {
     let bind_data = &bind_data_set.bind_data[0];
 
     assert_eq!(bind_data.object_name, "BoxyWorm-mesh");
-    assert_eq!(bind_data.skeleton_name.is_some());
+    assert!(bind_data.skeleton_name.is_some());
     assert_eq!(bind_data.skeleton_name.unwrap(), "BoxWormRoot");
     assert_eq!(bind_data.joint_names, ["Root", "UpperArm", "LowerArm"]);
     assert_eq!(bind_data.vertex_weights.len(), 29);
