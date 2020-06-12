@@ -354,10 +354,9 @@ impl ColladaDocument {
     }
 
     fn get_bind_data(&self, controller_element: &xml::Element) -> Option<BindData> {
-
-        let skeleton_name = controller_element.get_attribute("name", None)?;
+        let skeleton_name = controller_element.get_attribute("name", None);
         let skin_element = controller_element.get_child("skin", self.get_ns())?;
-        let object_name = skin_element.get_attribute("source", None)?.trim_left_matches('#');
+        let object_name = skin_element.get_attribute("source", None)?.trim_start_matches('#');
 
         let vertex_weights_element = (skin_element.get_child("vertex_weights", self.get_ns()))?;
         let vertex_weights = (self.get_vertex_weights(vertex_weights_element))?;
@@ -378,7 +377,7 @@ impl ColladaDocument {
 
         Some(BindData{
             object_name: object_name.to_string(),
-            skeleton_name: skeleton_name.to_string(),
+            skeleton_name: skeleton_name.map(|s| s.to_string()),
             joint_names: joint_names,
             inverse_bind_poses: inverse_bind_poses,
             weights: weights,
@@ -897,7 +896,8 @@ fn test_get_bind_data_set() {
     let bind_data = &bind_data_set.bind_data[0];
 
     assert_eq!(bind_data.object_name, "BoxyWorm-mesh");
-    assert_eq!(bind_data.skeleton_name, "BoxWormRoot");
+    assert!(bind_data.skeleton_name.is_some());
+    assert_eq!(bind_data.skeleton_name.as_ref().unwrap(), "BoxWormRoot");
     assert_eq!(bind_data.joint_names, ["Root", "UpperArm", "LowerArm"]);
     assert_eq!(bind_data.vertex_weights.len(), 29);
     assert_eq!(bind_data.weights.len(), 29);

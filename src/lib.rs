@@ -88,7 +88,7 @@ pub struct BindDataSet {
 #[derive(Debug)]
 pub struct BindData {
     pub object_name: String,
-    pub skeleton_name: String,
+    pub skeleton_name: Option<String>,
     pub joint_names: Vec<String>,
 
     /// Vertex weights, for vertex by index in mesh and joint by index in 'joint_names'
