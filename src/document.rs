@@ -199,8 +199,13 @@ impl ColladaDocument {
     pub fn get_animations(&self) -> Option<Vec<Animation>> {
         match self.root_element.get_child("library_animations", self.get_ns()) {
             Some(library_animations) => {
-                let animations = library_animations.get_children("animation", self.get_ns());
-                Some(animations.filter_map(|a| self.get_animation(a)).collect())
+                let animations = library_animations.get_child("animation", self.get_ns())
+                    .expect("animation wrapper not present")
+                    .get_children("animation", self.get_ns());
+
+                Some(animations.filter_map(|a| {
+                    self.get_animation(a)
+                }).collect())
             }
             None => {
                 None
@@ -212,7 +217,6 @@ impl ColladaDocument {
     /// Construct an Animation struct for the given <animation> element if possible
     ///
     fn get_animation(&self, animation_element: &Element) -> Option<Animation> {
-
       let channel_element = animation_element
         .get_child("channel", self.get_ns())
         .expect("Missing channel element in animation element");
@@ -289,7 +293,7 @@ impl ColladaDocument {
         let skeleton_ids: Vec<&str> = pre_order_iter(visual_scene)
             .filter(|e| e.name == "skeleton")
             .filter_map(|s| if let CharacterNode(ref id) = s.children[0] { Some(&id[..]) } else { None })
-            .map(|id| id.trim_left_matches('#'))
+            .map(|id| id.trim_start_matches('#'))
             .collect();
 
         if skeleton_ids.is_empty() {
