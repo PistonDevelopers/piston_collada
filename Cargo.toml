@@ -18,6 +18,6 @@ path = "src/lib.rs"
 [dependencies]
 
 log = "0.4"
-RustyXML = "0.1.1"
+RustyXML = "0.3"
 vecmath = "1.0.0"
 quaternion = "0.4.0"
