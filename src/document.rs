@@ -192,6 +192,21 @@ impl ColladaDocument {
         .collect()
     }
 
+    pub fn get_images(&self) -> HashMap<String, String> {
+        let ns = self.get_ns();
+        let lib_images = self.root_element.get_child("library_images", ns).expect("Could not get library_images from the document");
+        lib_images.get_children("image", ns)
+        .flat_map(|el|| {
+            let id = el.get_attribute("id", ns)
+                .expect(&format!("image is missing its id. {:#?}", el)).to_string();
+            let file_name = el
+            .get_child("init_from", ns)
+            .expect(format!("Could not get image from the element {:?}", el))
+            .content_str();
+            Some((id, file_name))
+    }).collect()
+}
+
 
     ///
     /// Return a vector of all Animations in the Collada document
