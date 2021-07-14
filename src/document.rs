@@ -45,10 +45,19 @@ impl GeometryBindingType {
 pub struct PhongEffect {
     pub emission: [f32; 4],
     pub ambient: [f32; 4],
-    pub diffuse: [f32; 4],
+    pub diffuse: Diffuse,
     pub specular: [f32; 4],
     pub shininess: f32,
     pub index_of_refraction: f32,
+}
+
+///
+/// Can be a plain color or point to a texture in the images library
+///
+#[derive(Clone, Debug, PartialEq)]
+pub enum Diffuse {
+    Color([f32; 4]),
+    Texture(String),
 }
 
 // TODO: Add more effect types and then unify them under a technique enum.
@@ -137,13 +146,25 @@ impl ColladaDocument {
                     .expect("ambient is missing color");
                 let ambient = ColladaDocument::get_color(ambient_color)
                     .expect("could not get ambient color.");
-                let diffuse_color = phong
+                let diffuse = phong
                     .get_child("diffuse", ns)
-                    .expect("phong is missing diffuse")
-                    .get_child("color", ns)
-                    .expect("diffuse is missing color");
-                let diffuse = ColladaDocument::get_color(diffuse_color)
-                    .expect("could not get diffuse color.");
+                    .expect("phong is missing diffuse");
+                let diffuse_texture = diffuse.get_child("texture", ns);
+                let diffuse_color = diffuse.get_child("color", ns);
+                let diffuse = match diffuse_texture {
+                    Some(texture) => Diffuse::Texture(
+                        texture
+                            .get_attribute("texture", ns)
+                            .expect("texture had no texture")
+                            .to_string(),
+                    ),
+                    _ => Diffuse::Color(
+                        ColladaDocument::get_color(
+                            diffuse_color.expect("diffuse is missing color"),
+                        )
+                        .expect("could not get diffuse color."),
+                    ),
+                };
                 let specular_color = phong
                     .get_child("specular", ns)
                     .expect("phong is missing specular")
@@ -213,7 +234,7 @@ impl ColladaDocument {
             .collect()
     }
 
-    /// 
+    ///
     /// Returns a hashmap of <imageid, filename>
     ///
     pub fn get_images(&self) -> HashMap<String, String> {
@@ -348,7 +369,7 @@ impl ColladaDocument {
                     None
                 }
             })
-            .map(|id| id.trim_left_matches('#'))
+            .map(|id| id.trim_start_matches('#'))
             .collect();
 
         if skeleton_ids.is_empty() {
