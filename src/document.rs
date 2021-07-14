@@ -62,7 +62,6 @@ pub enum LambertDiffuse {
 pub struct LambertEffect {
     pub emission: [f32; 4],
     pub diffuse: LambertDiffuse,
-    pub specular: [f32; 4],
     pub index_of_refraction: f32,
 }
 
@@ -125,17 +124,17 @@ impl ColladaDocument {
         }
     }
 
-    fn get_lambert(&self, phong: &Element, ns: Option<&str>) -> LambertEffect {
-        let emission_color = phong
+    fn get_lambert(&self, lamb: &Element, ns: Option<&str>) -> LambertEffect {
+        let emission_color = lamb
             .get_child("emission", ns)
-            .expect("phong is missing emission")
+            .expect("lambert is missing emission")
             .get_child("color", ns)
             .expect("emission is missing color");
         let emission =
             ColladaDocument::get_color(emission_color).expect("could not get emission color.");
-        let diffuse_element = phong
+        let diffuse_element = lamb
             .get_child("diffuse", ns)
-            .expect("phong is missing diffuse");
+            .expect("lambert is missing diffuse");
 
         let diffuse_texture = diffuse_element.get_child("texture", ns);
 
@@ -156,16 +155,9 @@ impl ColladaDocument {
             diffuse = LambertDiffuse::Color(diffuse_color);
         }
 
-        let specular_color = phong
-            .get_child("specular", ns)
-            .expect("phong is missing specular")
-            .get_child("color", ns)
-            .expect("specular is missing color");
-        let specular =
-            ColladaDocument::get_color(specular_color).expect("could not get specular color.");
-        let index_of_refraction: f32 = phong
+        let index_of_refraction: f32 = lamb
             .get_child("index_of_refraction", ns)
-            .expect("phong is missing index_of_refraction")
+            .expect("lambert is missing index_of_refraction")
             .get_child("float", ns)
             .expect("index_of_refraction is missing float")
             .content_str()
@@ -178,7 +170,6 @@ impl ColladaDocument {
             diffuse,
             emission,
             index_of_refraction,
-            specular,
         }
     }
 
