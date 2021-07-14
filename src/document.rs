@@ -45,19 +45,31 @@ impl GeometryBindingType {
 pub struct PhongEffect {
     pub emission: [f32; 4],
     pub ambient: [f32; 4],
-    pub diffuse: Diffuse,
+    pub diffuse: [f32; 4],
     pub specular: [f32; 4],
     pub shininess: f32,
     pub index_of_refraction: f32,
 }
-
 ///
 /// Can be a plain color or point to a texture in the images library
 ///
 #[derive(Clone, Debug, PartialEq)]
-pub enum Diffuse {
+pub enum LambertDiffuse {
     Color([f32; 4]),
     Texture(String),
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct LambertEffect {
+    pub emission: [f32; 4],
+    pub diffuse: LambertDiffuse,
+    pub specular: [f32; 4],
+    pub index_of_refraction: f32,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum MaterialEffect {
+    Phong(PhongEffect),
+    Lambert(LambertEffect),
 }
 
 // TODO: Add more effect types and then unify them under a technique enum.
@@ -113,11 +125,129 @@ impl ColladaDocument {
         }
     }
 
+    fn get_lambert(&self, phong: &Element, ns: Option<&str>) -> LambertEffect {
+        let emission_color = phong
+            .get_child("emission", ns)
+            .expect("phong is missing emission")
+            .get_child("color", ns)
+            .expect("emission is missing color");
+        let emission =
+            ColladaDocument::get_color(emission_color).expect("could not get emission color.");
+        let diffuse_element = phong
+            .get_child("diffuse", ns)
+            .expect("phong is missing diffuse");
+
+        let diffuse_texture = diffuse_element.get_child("texture", ns);
+
+        let diffuse;
+        if let Some(texture) = diffuse_texture {
+            diffuse = LambertDiffuse::Texture(
+                texture
+                    .get_attribute("texture", None)
+                    .expect("No texture attribute on texture")
+                    .to_string(),
+            );
+        } else {
+            let diffuse_element_color = diffuse_element
+                .get_child("color", ns)
+                .expect("diffuse is missing color");
+            let diffuse_color = ColladaDocument::get_color(diffuse_element_color)
+                .expect("could not get diffuse color.");
+            diffuse = LambertDiffuse::Color(diffuse_color);
+        }
+
+        let specular_color = phong
+            .get_child("specular", ns)
+            .expect("phong is missing specular")
+            .get_child("color", ns)
+            .expect("specular is missing color");
+        let specular =
+            ColladaDocument::get_color(specular_color).expect("could not get specular color.");
+        let index_of_refraction: f32 = phong
+            .get_child("index_of_refraction", ns)
+            .expect("phong is missing index_of_refraction")
+            .get_child("float", ns)
+            .expect("index_of_refraction is missing float")
+            .content_str()
+            .as_str()
+            .parse()
+            .ok()
+            .expect("could not parse index_of_refraction");
+
+        LambertEffect {
+            diffuse,
+            emission,
+            index_of_refraction,
+            specular,
+        }
+    }
+
+    fn get_phong(&self, phong: &Element, ns: Option<&str>) -> PhongEffect {
+        let emission_color = phong
+            .get_child("emission", ns)
+            .expect("phong is missing emission")
+            .get_child("color", ns)
+            .expect("emission is missing color");
+        let emission =
+            ColladaDocument::get_color(emission_color).expect("could not get emission color.");
+        let ambient_color = phong
+            .get_child("ambient", ns)
+            .expect("phong is missing ambient")
+            .get_child("color", ns)
+            .expect("ambient is missing color");
+        let ambient =
+            ColladaDocument::get_color(ambient_color).expect("could not get ambient color.");
+        let diffuse = phong
+            .get_child("diffuse", ns)
+            .expect("phong is missing diffuse");
+        let diffuse_color = diffuse
+            .get_child("color", ns)
+            .expect("diffuse is missing color");
+        let diffuse =
+            ColladaDocument::get_color(diffuse_color).expect("could not get diffuse color.");
+        let specular_color = phong
+            .get_child("specular", ns)
+            .expect("phong is missing specular")
+            .get_child("color", ns)
+            .expect("specular is missing color");
+        let specular =
+            ColladaDocument::get_color(specular_color).expect("could not get specular color.");
+        let shininess: f32 = phong
+            .get_child("shininess", ns)
+            .expect("phong is missing shininess")
+            .get_child("float", ns)
+            .expect("shininess is missing float")
+            .content_str()
+            .as_str()
+            .parse()
+            .ok()
+            .expect("could not parse shininess");
+        let index_of_refraction: f32 = phong
+            .get_child("index_of_refraction", ns)
+            .expect("phong is missing index_of_refraction")
+            .get_child("float", ns)
+            .expect("index_of_refraction is missing float")
+            .content_str()
+            .as_str()
+            .parse()
+            .ok()
+            .expect("could not parse index_of_refraction");
+
+        PhongEffect {
+            ambient,
+            diffuse,
+            emission,
+            index_of_refraction,
+            shininess,
+            specular,
+        }
+    }
+
     ///
     /// Returns the library of effects.
     /// Current only supports Phong shading.
     ///
-    pub fn get_effect_library(&self) -> HashMap<String, PhongEffect> {
+    pub fn get_effect_library(&self) -> HashMap<String, MaterialEffect> {
         let ns = self.get_ns();
         let lib_effs = self
             .root_element
@@ -125,84 +255,24 @@ impl ColladaDocument {
             .expect("Could not get library_effects from the document.");
         lib_effs
             .get_children("effect", ns)
-            .flat_map(|el: &Element| -> Option<(String, PhongEffect)> {
+            .flat_map(|el: &Element| -> Option<(String, MaterialEffect)> {
                 let id = el
                     .get_attribute("id", None)
                     .expect(&format!("effect is missing its id. {:#?}", el));
                 let prof = el.get_child("profile_COMMON", ns)?;
                 let tech = prof.get_child("technique", ns)?;
-                let phong = tech.get_child("phong", ns)?;
-                let emission_color = phong
-                    .get_child("emission", ns)
-                    .expect("phong is missing emission")
-                    .get_child("color", ns)
-                    .expect("emission is missing color");
-                let emission = ColladaDocument::get_color(emission_color)
-                    .expect("could not get emission color.");
-                let ambient_color = phong
-                    .get_child("ambient", ns)
-                    .expect("phong is missing ambient")
-                    .get_child("color", ns)
-                    .expect("ambient is missing color");
-                let ambient = ColladaDocument::get_color(ambient_color)
-                    .expect("could not get ambient color.");
-                let diffuse = phong
-                    .get_child("diffuse", ns)
-                    .expect("phong is missing diffuse");
-                let diffuse_texture = diffuse.get_child("texture", ns);
-                let diffuse_color = diffuse.get_child("color", ns);
-                let diffuse = match diffuse_texture {
-                    Some(texture) => Diffuse::Texture(
-                        texture
-                            .get_attribute("texture", ns)
-                            .expect("texture had no texture")
-                            .to_string(),
-                    ),
-                    _ => Diffuse::Color(
-                        ColladaDocument::get_color(
-                            diffuse_color.expect("diffuse is missing color"),
-                        )
-                        .expect("could not get diffuse color."),
-                    ),
+                let phong = tech.get_child("phong", ns);
+                if let Some(p) = phong {
+                    let phong_effect = self.get_phong(p, ns);
+                    return Some((id.to_string(), MaterialEffect::Phong(phong_effect)));
                 };
-                let specular_color = phong
-                    .get_child("specular", ns)
-                    .expect("phong is missing specular")
-                    .get_child("color", ns)
-                    .expect("specular is missing color");
-                let specular = ColladaDocument::get_color(specular_color)
-                    .expect("could not get specular color.");
-                let shininess: f32 = phong
-                    .get_child("shininess", ns)
-                    .expect("phong is missing shininess")
-                    .get_child("float", ns)
-                    .expect("shininess is missing float")
-                    .content_str()
-                    .as_str()
-                    .parse()
-                    .ok()
-                    .expect("could not parse shininess");
-                let index_of_refraction: f32 = phong
-                    .get_child("index_of_refraction", ns)
-                    .expect("phong is missing index_of_refraction")
-                    .get_child("float", ns)
-                    .expect("index_of_refraction is missing float")
-                    .content_str()
-                    .as_str()
-                    .parse()
-                    .ok()
-                    .expect("could not parse index_of_refraction");
-                Some((
-                    id.to_string(),
-                    PhongEffect {
-                        emission,
-                        ambient,
-                        diffuse,
-                        specular,
-                        shininess,
-                        index_of_refraction,
-                    },
-                ))
+                let lambert = tech.get_child("lambert", ns);
+                if let Some(lam) = lambert {
+                    let lambert_effect = self.get_lambert(lam, ns);
+                    return Some((id.to_string(), MaterialEffect::Lambert(lambert_effect)));
+                };
+
+                None
             })
             .collect()
     }
