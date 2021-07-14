@@ -247,7 +247,7 @@ impl ColladaDocument {
             .get_children("image", ns)
             .flat_map(|el| {
                 let id = el
-                    .get_attribute("id", ns)
+                    .get_attribute("id", None)
                     .expect(&format!("image is missing its id. {:#?}", el))
                     .to_string();
                 let file_name = el
