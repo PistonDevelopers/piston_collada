@@ -1,9 +1,10 @@
 use std::str::FromStr;
-use xml::{Element};
-use xml::Xml::{ElementNode, CharacterNode};
+use xml::Element;
+use xml::Xml::{CharacterNode, ElementNode};
 
 pub fn parse_string_to_vector<T: FromStr>(string: &str) -> Vec<T> {
-    string.trim()
+    string
+        .trim()
         .split(&[' ', '\n'][..])
         .map(|s| s.parse().ok().expect("Error parsing array in COLLADA file"))
         .collect()
@@ -25,13 +26,19 @@ pub fn has_attribute_with_value(e: &Element, name: &str, value: &str) -> bool {
 }
 
 pub fn to_matrix_array(float_array: Vec<f32>) -> Vec<[[f32; 4]; 4]> {
-    float_array.chunks(16).map(|chunk| {
-        let mut matrix = [[0f32; 4]; 4];
-        for (&chunk_value, matrix_value) in chunk.iter().zip(matrix.iter_mut().flat_map(|n| n.iter_mut())) {
-            *matrix_value = chunk_value;
-        }
-        matrix
-    }).collect()
+    float_array
+        .chunks(16)
+        .map(|chunk| {
+            let mut matrix = [[0f32; 4]; 4];
+            for (&chunk_value, matrix_value) in chunk
+                .iter()
+                .zip(matrix.iter_mut().flat_map(|n| n.iter_mut()))
+            {
+                *matrix_value = chunk_value;
+            }
+            matrix
+        })
+        .collect()
 }
 
 ///
@@ -48,11 +55,13 @@ pub fn pre_order_iter<'a>(root: &'a Element) -> PreOrderIterator<'a> {
 /// using a pre-order tree traversal (root before children)
 ///
 pub fn pre_order_with_depth_iter<'a>(root: &'a Element) -> PreOrderWithDepthIterator<'a> {
-    PreOrderWithDepthIterator { stack: vec![(root, 0)] }
+    PreOrderWithDepthIterator {
+        stack: vec![(root, 0)],
+    }
 }
 
 pub struct PreOrderIterator<'a> {
-    stack: Vec<&'a Element>
+    stack: Vec<&'a Element>,
 }
 
 impl<'a> Iterator for PreOrderIterator<'a> {
@@ -67,14 +76,14 @@ impl<'a> Iterator for PreOrderIterator<'a> {
                     }
                 }
             }
-            None => ()
+            None => (),
         }
         current_element
     }
 }
 
 pub struct PreOrderWithDepthIterator<'a> {
-    stack: Vec<(&'a Element, usize)>
+    stack: Vec<(&'a Element, usize)>,
 }
 
 impl<'a> Iterator for PreOrderWithDepthIterator<'a> {
@@ -89,7 +98,7 @@ impl<'a> Iterator for PreOrderWithDepthIterator<'a> {
                 }
                 Some((element, depth))
             }
-            None => None
+            None => None,
         }
     }
 }
