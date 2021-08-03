@@ -1,5 +1,5 @@
-extern crate xml;
 extern crate vecmath;
+extern crate xml;
 
 #[macro_use]
 extern crate log;
@@ -8,8 +8,8 @@ pub use obj::*;
 pub use vecmath::Matrix4;
 
 pub mod document;
-mod utils;
 mod obj;
+mod utils;
 
 #[derive(Debug, Clone)]
 pub struct Skeleton {
@@ -113,4 +113,4 @@ pub struct VertexWeight {
 pub type WeightIndex = usize;
 
 pub type JointIndex = u8;
-pub const ROOT_JOINT_PARENT_INDEX: JointIndex  = 255u8;
+pub const ROOT_JOINT_PARENT_INDEX: JointIndex = 255u8;
