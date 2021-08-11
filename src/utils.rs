@@ -45,7 +45,7 @@ pub fn to_matrix_array(float_array: Vec<f32>) -> Vec<[[f32; 4]; 4]> {
 /// Returns an iterator over all ElementNodes in an XML Element subtree with the given root,
 /// using a pre-order tree traversal (root before children)
 ///
-pub fn pre_order_iter<'a>(root: &'a Element) -> PreOrderIterator<'a> {
+pub fn pre_order_iter(root: &Element) -> PreOrderIterator {
     PreOrderIterator { stack: vec![root] }
 }
 
@@ -54,7 +54,7 @@ pub fn pre_order_iter<'a>(root: &'a Element) -> PreOrderIterator<'a> {
 /// with their depth relative to the subtree root,
 /// using a pre-order tree traversal (root before children)
 ///
-pub fn pre_order_with_depth_iter<'a>(root: &'a Element) -> PreOrderWithDepthIterator<'a> {
+pub fn pre_order_with_depth_iter(root: &Element) -> PreOrderWithDepthIterator {
     PreOrderWithDepthIterator {
         stack: vec![(root, 0)],
     }

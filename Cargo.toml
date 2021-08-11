@@ -2,6 +2,7 @@
 
 name = "collada"
 version = "0.13.0"
+edition = "2018"
 authors = ["Steve Jahns <s.t.jahns@gmail.com>"]
 keywords = ["collada", "3d", "format", "piston"]
 description = "A library for parsing COLLADA documents for mesh, skeletal and animation data"
