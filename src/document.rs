@@ -1,17 +1,17 @@
-use obj::*;
+use crate::obj::*;
+use crate::utils::*;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
 use std::str::FromStr;
-use utils::*;
 use xml::Element;
 use xml::Xml::CharacterNode;
 
 use vecmath;
 use xml;
 
-use {
+use crate::{
     Animation, BindData, BindDataSet, Joint, JointIndex, Skeleton, VertexWeight,
     ROOT_JOINT_PARENT_INDEX,
 };
@@ -108,9 +108,7 @@ impl ColladaDocument {
     ///
     pub fn from_str(xml_string: &str) -> Result<ColladaDocument, &'static str> {
         match xml_string.parse() {
-            Ok(root_element) => Ok(ColladaDocument {
-                root_element: root_element,
-            }),
+            Ok(root_element) => Ok(ColladaDocument { root_element }),
             Err(_) => Err("Error while parsing COLLADA document."),
         }
     }
@@ -249,7 +247,7 @@ impl ColladaDocument {
             .flat_map(|el: &Element| -> Option<(String, MaterialEffect)> {
                 let id = el
                     .get_attribute("id", None)
-                    .expect(&format!("effect is missing its id. {:#?}", el));
+                    .unwrap_or_else(|| panic!("effect is missing its id. {:#?}", el));
                 let prof = el.get_child("profile_COMMON", ns)?;
                 let tech = prof.get_child("technique", ns)?;
                 let phong = tech.get_child("phong", ns);
@@ -279,7 +277,7 @@ impl ColladaDocument {
             .flat_map(|el| {
                 let id = el
                     .get_attribute("id", None)
-                    .expect(&format!("material is missing its id. {:#?}", el));
+                    .unwrap_or_else(|| panic!("material is missing its id. {:#?}", el));
                 let mut url: String = el
                     .get_child("instance_effect", ns)
                     .expect("could not get material instance_effect")
@@ -375,8 +373,8 @@ impl ColladaDocument {
 
         Some(Animation {
             target: target.to_string(),
-            sample_times: sample_times,
-            sample_poses: sample_poses,
+            sample_times,
+            sample_poses,
         })
     }
 
@@ -392,7 +390,7 @@ impl ColladaDocument {
 
         Some(ObjSet {
             material_library: None,
-            objects: objects,
+            objects,
         })
     }
 
@@ -405,9 +403,7 @@ impl ColladaDocument {
             .get_child("library_controllers", self.get_ns()))?;
         let controllers = library_controllers.get_children("controller", self.get_ns());
         let bind_data = controllers.filter_map(|c| self.get_bind_data(c)).collect();
-        Some(BindDataSet {
-            bind_data: bind_data,
-        })
+        Some(BindDataSet { bind_data })
     }
 
     ///
@@ -430,7 +426,7 @@ impl ColladaDocument {
                     None
                 }
             })
-            .map(|id| id.trim_left_matches('#'))
+            .map(|id| id.trim_start_matches('#'))
             .collect();
 
         if skeleton_ids.is_empty() {
@@ -474,7 +470,7 @@ impl ColladaDocument {
                 };
 
             joints.push(Joint {
-                inverse_bind_pose: inverse_bind_pose,
+                inverse_bind_pose,
                 name: joint_name,
                 parent_index: *parent_index_stack.last().unwrap(),
             });
@@ -494,10 +490,7 @@ impl ColladaDocument {
             parent_index_stack.push(joint_index as JointIndex);
         }
 
-        Some(Skeleton {
-            joints: joints,
-            bind_poses: bind_poses,
-        })
+        Some(Skeleton { joints, bind_poses })
     }
 
     fn get_bind_data(&self, controller_element: &xml::Element) -> Option<BindData> {
@@ -526,10 +519,10 @@ impl ColladaDocument {
         Some(BindData {
             object_name: object_name.to_string(),
             skeleton_name: skeleton_name.map(|s| s.to_string()),
-            joint_names: joint_names,
-            inverse_bind_poses: inverse_bind_poses,
-            weights: weights,
-            vertex_weights: vertex_weights,
+            joint_names,
+            inverse_bind_poses,
+            weights,
+            vertex_weights,
         })
     }
 
@@ -559,13 +552,12 @@ impl ColladaDocument {
 
         let vertex_weights = vertex_indices
             .iter()
-            .filter_map(|vertex_index| match joint_weight_iter.next() {
-                Some(joint_weight) => Some(VertexWeight {
+            .filter_map(|vertex_index| {
+                joint_weight_iter.next().map(|joint_weight| VertexWeight {
                     vertex: *vertex_index,
                     joint: joint_weight[joint_index_offset] as JointIndex,
                     weight: joint_weight[weight_index_offset],
-                }),
-                None => None,
+                })
             })
             .collect();
 
@@ -701,11 +693,11 @@ impl ColladaDocument {
             name: name.to_string(),
             vertices: positions,
             tex_vertices: texcoords,
-            normals: normals,
-            joint_weights: joint_weights,
+            normals,
+            joint_weights,
             geometry: vec![Geometry {
                 smooth_shading_group: 0,
-                mesh: mesh,
+                mesh,
             }],
         })
     }
@@ -759,7 +751,7 @@ impl ColladaDocument {
             .children
             .iter()
             .filter_map(|node| {
-                if let &xml::Xml::ElementNode(ref e) = node {
+                if let xml::Xml::ElementNode(ref e) = node {
                     Some(e)
                 } else {
                     None
@@ -789,10 +781,8 @@ impl ColladaDocument {
         let array_element =
             (if let Some(float_array) = source.get_child("float_array", self.get_ns()) {
                 Some(float_array)
-            } else if let Some(name_array) = source.get_child("Name_array", self.get_ns()) {
-                Some(name_array)
             } else {
-                None
+                source.get_child("Name_array", self.get_ns())
             })?;
         get_array_content(array_element)
     }
@@ -805,7 +795,7 @@ impl ColladaDocument {
             .get_children("input", self.get_ns())
             .filter(|c| {
                 if let Some(set) = c.get_attribute("set", None) {
-                    return set == "0";
+                    set == "0"
                 } else {
                     true
                 }
@@ -829,7 +819,7 @@ impl ColladaDocument {
             .get_children("input", self.get_ns())
             .filter(|c| {
                 if let Some(set) = c.get_attribute("set", None) {
-                    return set == "0";
+                    set == "0"
                 } else {
                     true
                 }
@@ -853,7 +843,7 @@ impl ColladaDocument {
             .get_children("input", self.get_ns())
             .filter(|c| {
                 if let Some(set) = c.get_attribute("set", None) {
-                    return set == "0";
+                    set == "0"
                 } else {
                     true
                 }
@@ -877,7 +867,7 @@ impl ColladaDocument {
             .get_children("input", self.get_ns())
             .filter(|c| {
                 if let Some(set) = c.get_attribute("set", None) {
-                    return set == "0";
+                    set == "0"
                 } else {
                     true
                 }
@@ -894,15 +884,11 @@ impl ColladaDocument {
             .map(|indices| {
                 let position_index = indices[position_offset];
 
-                let normal_index_opt = match normal_offset_opt {
-                    Some(normal_offset) => Some(indices[normal_offset]),
-                    None => None,
-                };
+                let normal_index_opt =
+                    normal_offset_opt.map(|normal_offset| indices[normal_offset]);
 
-                let texcoord_index_opt = match texcoord_offset_opt {
-                    Some(texcoord_offset) => Some(indices[texcoord_offset]),
-                    None => None,
-                };
+                let texcoord_index_opt =
+                    texcoord_offset_opt.map(|texcoord_offset| indices[texcoord_offset]);
 
                 (position_index, texcoord_index_opt, normal_index_opt)
             })
@@ -934,15 +920,15 @@ impl ColladaDocument {
                 xml::Xml::ElementNode(el) => {
                     if el.name == GeometryBindingType::Polylist.name() {
                         let shapes = self
-                            .get_polylist_shape(&el)
+                            .get_polylist_shape(el)
                             .expect("Polylist had no shapes.");
-                        let material = self.get_material(&el);
+                        let material = self.get_material(el);
                         let polylist = Polylist { shapes, material };
                         prims.push(PrimitiveElement::Polylist(polylist))
                     } else if el.name == GeometryBindingType::Triangles.name() {
-                        let material = self.get_material(&el);
+                        let material = self.get_material(el);
                         let triangles = self
-                            .get_triangles(&el, material)
+                            .get_triangles(el, material)
                             .expect("Triangles had no indices.");
                         prims.push(PrimitiveElement::Triangles(triangles))
                     }
@@ -1051,11 +1037,11 @@ impl ColladaDocument {
 
 #[test]
 fn test_get_obj_set() {
-    let collada_document = ColladaDocument::from_path(&Path::new("test_assets/test.dae")).unwrap();
+    let collada_document = ColladaDocument::from_path(Path::new("test_assets/test.dae")).unwrap();
     let obj_set = collada_document.get_obj_set().unwrap();
     assert_eq!(obj_set.objects.len(), 1);
 
-    let ref object = obj_set.objects[0];
+    let object = &obj_set.objects[0];
     assert_eq!(object.id, "BoxyWorm-mesh");
     assert_eq!(object.name, "BoxyWorm");
     assert_eq!(object.vertices.len(), 16);
@@ -1063,13 +1049,13 @@ fn test_get_obj_set() {
     assert_eq!(object.normals.len(), 28);
     assert_eq!(object.geometry.len(), 1);
 
-    let ref geometry = object.geometry[0];
+    let geometry = &object.geometry[0];
 
-    let ref prim = geometry.mesh[0];
+    let prim = &geometry.mesh[0];
     if let PrimitiveElement::Polylist(polylist) = prim {
         assert_eq!(polylist.shapes.len(), 28);
-        let ref shape = polylist.shapes[1];
-        if let &Shape::Triangle((position_index, Some(texture_index), Some(normal_index)), _, _) =
+        let shape = polylist.shapes[1];
+        if let Shape::Triangle((position_index, Some(texture_index), Some(normal_index)), _, _) =
             shape
         {
             assert_eq!(position_index, 7);
@@ -1084,21 +1070,21 @@ fn test_get_obj_set() {
 #[test]
 fn test_get_obj_set_triangles_geometry() {
     let collada_document =
-        ColladaDocument::from_path(&Path::new("test_assets/test_cube_triangles_geometry.dae"))
+        ColladaDocument::from_path(Path::new("test_assets/test_cube_triangles_geometry.dae"))
             .unwrap();
     let obj_set = collada_document.get_obj_set().unwrap();
     assert_eq!(obj_set.objects.len(), 1);
 
-    let ref object = obj_set.objects[0];
+    let object = &obj_set.objects[0];
     assert_eq!(object.id, "Cube-mesh");
     assert_eq!(object.name, "Cube");
     assert_eq!(object.vertices.len(), 8);
     assert_eq!(object.normals.len(), 12);
     assert_eq!(object.geometry.len(), 1);
 
-    let ref geometry = object.geometry[0];
+    let geometry = &object.geometry[0];
 
-    let ref prim = geometry.mesh[0];
+    let prim = &geometry.mesh[0];
     match prim {
         PrimitiveElement::Triangles(triangles) => {
             assert_eq!(triangles.vertices.len(), 12);
@@ -1123,7 +1109,7 @@ fn test_get_obj_set_triangles_geometry() {
 
 #[test]
 fn test_get_bind_data_set() {
-    let collada_document = ColladaDocument::from_path(&Path::new("test_assets/test.dae")).unwrap();
+    let collada_document = ColladaDocument::from_path(Path::new("test_assets/test.dae")).unwrap();
     let bind_data_set = collada_document.get_bind_data_set().unwrap();
     let bind_data = &bind_data_set.bind_data[0];
 
@@ -1138,7 +1124,7 @@ fn test_get_bind_data_set() {
 
 #[test]
 fn test_get_skeletons() {
-    let collada_document = ColladaDocument::from_path(&Path::new("test_assets/test.dae")).unwrap();
+    let collada_document = ColladaDocument::from_path(Path::new("test_assets/test.dae")).unwrap();
     let skeletons = collada_document.get_skeletons().unwrap();
     assert_eq!(skeletons.len(), 1);
 
@@ -1165,16 +1151,16 @@ fn test_get_skeletons() {
 
 #[test]
 fn test_get_animations() {
-    let collada_document = ColladaDocument::from_path(&Path::new("test_assets/test.dae")).unwrap();
+    let collada_document = ColladaDocument::from_path(Path::new("test_assets/test.dae")).unwrap();
     let animations = collada_document.get_animations().unwrap();
     assert_eq!(animations.len(), 4);
 
-    let ref animation = animations[1];
+    let animation = &animations[1];
     assert_eq!(animation.target, "UpperArm/transform");
     assert_eq!(animation.sample_times.len(), 4);
     assert_eq!(animation.sample_poses.len(), 4);
 
-    let ref animation = animations[3];
+    let animation = &animations[3];
     assert_eq!(animation.target, "LowerArm/transform");
     assert_eq!(animation.sample_times.len(), 4);
     assert_eq!(animation.sample_poses.len(), 4);
@@ -1183,6 +1169,6 @@ fn test_get_animations() {
 #[test]
 fn test_get_obj_set_noskeleton() {
     let collada_document =
-        ColladaDocument::from_path(&Path::new("test_assets/test_noskeleton.dae")).unwrap();
+        ColladaDocument::from_path(Path::new("test_assets/test_noskeleton.dae")).unwrap();
     collada_document.get_obj_set().unwrap();
 }
