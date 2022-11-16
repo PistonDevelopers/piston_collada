@@ -1,7 +1,7 @@
 [package]
 
 name = "collada"
-version = "0.14.0"
+version = "0.15.0"
 edition = "2018"
 authors = ["Steve Jahns <s.t.jahns@gmail.com>"]
 keywords = ["collada", "3d", "format", "piston"]
@@ -21,4 +21,4 @@ path = "src/lib.rs"
 log = "0.4"
 RustyXML = "0.3"
 vecmath = "1.0.0"
-quaternion = "0.4.0"
+quaternion = "1.0.0"
