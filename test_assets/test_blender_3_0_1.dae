@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="utf-8"?>
+<COLLADA xmlns="http://www.collada.org/2005/11/COLLADASchema" version="1.4.1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <asset>
+    <contributor>
+      <author>Blender User</author>
+      <authoring_tool>Blender 3.0.1</authoring_tool>
+    </contributor>
+    <created>2025-02-15T17:42:10</created>
+    <modified>2025-02-15T17:42:10</modified>
+    <unit name="meter" meter="1"/>
+    <up_axis>Z_UP</up_axis>
+  </asset>
+  <library_effects>
+    <effect id="Material-effect">
+      <profile_COMMON>
+        <technique sid="common">
+          <lambert>
+            <emission>
+              <color sid="emission">0 0 0 1</color>
+            </emission>
+            <diffuse>
+              <color sid="diffuse">0.8 0.8 0.8 1</color>
+            </diffuse>
+            <reflectivity>
+              <float sid="specular">0.5</float>
+            </reflectivity>
+          </lambert>
+        </technique>
+      </profile_COMMON>
+    </effect>
+  </library_effects>
+  <library_images/>
+  <library_materials>
+    <material id="Material-material" name="Material">
+      <instance_effect url="#Material-effect"/>
+    </material>
+  </library_materials>
+  <library_geometries>
+    <geometry id="BoxyWorm-mesh" name="BoxyWorm">
+      <mesh>
+        <source id="BoxyWorm-mesh-positions">
+          <float_array id="BoxyWorm-mesh-positions-array" count="48">1 1 -1 1 -1 -1 -1 -0.9999998 -1 -0.9999997 1 -1 1 0.9999995 1 0.9999994 -1.000001 1 -1 -0.9999997 1 -1 1 1 1 0.9999995 3 0.9999994 -1.000001 3 -1 -0.9999997 3 -1 1 3 1 0.9999995 5 0.9999994 -1.000001 5 -1 -0.9999997 5 -1 1 5</float_array>
+          <technique_common>
+            <accessor source="#BoxyWorm-mesh-positions-array" count="16" stride="3">
+              <param name="X" type="float"/>
+              <param name="Y" type="float"/>
+              <param name="Z" type="float"/>
+            </accessor>
+          </technique_common>
+        </source>
+        <source id="BoxyWorm-mesh-normals">
+          <float_array id="BoxyWorm-mesh-normals-array" count="57">0 0 -1 -1 1.78814e-7 0 1 0 -2.38419e-7 0 -1 -4.76837e-7 -1 2.38419e-7 -1.49012e-7 2.68221e-7 1 2.38419e-7 -4.76837e-7 -1 0 2.68221e-7 1 0 1 -5.36442e-7 0 -4.76837e-7 0 1 0 0 -1 -1 2.38419e-7 0 1 -5.96046e-7 3.27825e-7 -4.76837e-7 -1 0 -1 2.38419e-7 -1.19209e-7 2.08616e-7 1 0 -1 2.38419e-7 0 1 -5.96046e-7 0 4.76837e-7 0 1</float_array>
+          <technique_common>
+            <accessor source="#BoxyWorm-mesh-normals-array" count="19" stride="3">
+              <param name="X" type="float"/>
+              <param name="Y" type="float"/>
+              <param name="Z" type="float"/>
+            </accessor>
+          </technique_common>
+        </source>
+        <source id="BoxyWorm-mesh-map-0">
+          <float_array id="BoxyWorm-mesh-map-0-array" count="168">0 0 1 1 0 1 1 0 0 1 0 0 1 0 0 1 0 0 1 0 0 1 0 0 0 0 1 1 0 1 1 0 0 1 0 0 1 0 0 1 0 0 1 0 0 1 0 0 1 0 0 1 0 0 1 0 0 1 0 0 1 0 0 1 0 0 1 0 0 1 0 0 1 0 0 1 0 0 1 0 0 1 0 0 0 0 1 0 1 1 1 0 1 1 0 1 1 0 1 1 0 1 1 0 1 1 0 1 0 0 1 0 1 1 1 0 1 1 0 1 1 0 1 1 0 1 1 0 1 1 0 1 1 0 1 1 0 1 1 0 1 1 0 1 1 0 1 1 0 1 1 0 1 1 0 1 1 0 1 1 0 1 1 0 1 1 0 1</float_array>
+          <technique_common>
+            <accessor source="#BoxyWorm-mesh-map-0-array" count="84" stride="2">
+              <param name="S" type="float"/>
+              <param name="T" type="float"/>
+            </accessor>
+          </technique_common>
+        </source>
+        <source id="BoxyWorm-mesh-colors-Col" name="Col">
+          <float_array id="BoxyWorm-mesh-colors-Col-array" count="336">1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1</float_array>
+          <technique_common>
+            <accessor source="#BoxyWorm-mesh-colors-Col-array" count="84" stride="4">
+              <param name="R" type="float"/>
+              <param name="G" type="float"/>
+              <param name="B" type="float"/>
+              <param name="A" type="float"/>
+            </accessor>
+          </technique_common>
+        </source>
+        <vertices id="BoxyWorm-mesh-vertices">
+          <input semantic="POSITION" source="#BoxyWorm-mesh-positions"/>
+        </vertices>
+        <triangles material="Material-material" count="28">
+          <input semantic="VERTEX" source="#BoxyWorm-mesh-vertices" offset="0"/>
+          <input semantic="NORMAL" source="#BoxyWorm-mesh-normals" offset="1"/>
+          <input semantic="TEXCOORD" source="#BoxyWorm-mesh-map-0" offset="2" set="0"/>
+          <input semantic="COLOR" source="#BoxyWorm-mesh-colors-Col" offset="3" set="0"/>
+          <p>0 0 0 0 2 0 1 1 3 0 2 2 6 1 3 3 11 1 4 4 7 1 5 5 4 2 6 6 1 2 7 7 0 2 8 8 5 3 9 9 2 3 10 10 1 3 11 11 2 4 12 12 7 4 13 13 3 4 14 14 0 5 15 15 7 5 16 16 4 5 17 17 10 1 18 18 15 1 19 19 11 1 20 20 5 6 21 21 10 6 22 22 6 6 23 23 7 7 24 24 8 7 25 25 4 7 26 26 4 8 27 27 9 8 28 28 5 8 29 29 15 9 30 30 13 9 31 31 12 9 32 32 9 6 33 33 14 6 34 34 10 6 35 35 11 7 36 36 12 7 37 37 8 7 38 38 8 8 39 39 13 8 40 40 9 8 41 41 0 10 42 42 1 10 43 43 2 10 44 44 6 11 45 45 10 11 46 46 11 11 47 47 4 12 48 48 5 12 49 49 1 12 50 50 5 13 51 51 6 13 52 52 2 13 53 53 2 14 54 54 6 14 55 55 7 14 56 56 0 15 57 57 3 15 58 58 7 15 59 59 10 16 60 60 14 16 61 61 15 16 62 62 5 6 63 63 9 6 64 64 10 6 65 65 7 7 66 66 11 7 67 67 8 7 68 68 4 17 69 69 8 17 70 70 9 17 71 71 15 18 72 72 14 18 73 73 13 18 74 74 9 6 75 75 13 6 76 76 14 6 77 77 11 7 78 78 15 7 79 79 12 7 80 80 8 17 81 81 12 17 82 82 13 17 83 83</p>
+        </triangles>
+      </mesh>
+    </geometry>
+  </library_geometries>
+  <library_controllers>
+    <controller id="BoxWormRoot_TheMesh-skin" name="BoxWormRoot">
+      <skin source="#BoxyWorm-mesh">
+        <bind_shape_matrix>1 0 0 0 0 1 0 0 0 0 1 1 0 0 0 1</bind_shape_matrix>
+        <source id="BoxWormRoot_TheMesh-skin-joints">
+          <Name_array id="BoxWormRoot_TheMesh-skin-joints-array" count="3">Root UpperArm LowerArm</Name_array>
+          <technique_common>
+            <accessor source="#BoxWormRoot_TheMesh-skin-joints-array" count="3" stride="1">
+              <param name="JOINT" type="name"/>
+            </accessor>
+          </technique_common>
+        </source>
+        <source id="BoxWormRoot_TheMesh-skin-bind_poses">
+          <float_array id="BoxWormRoot_TheMesh-skin-bind_poses-array" count="48">-1 0 -4.76837e-7 9.53674e-7 0 -1 0 1 -4.76837e-7 0 1 -2 0 0 0 1 1 0 0 0 0 0 1 -2 0 -1 0 0 0 0 0 1 1 0 0 0 0 0 -1 2 0 1 0 0 0 0 0 1</float_array>
+          <technique_common>
+            <accessor source="#BoxWormRoot_TheMesh-skin-bind_poses-array" count="3" stride="16">
+              <param name="TRANSFORM" type="float4x4"/>
+            </accessor>
+          </technique_common>
+        </source>
+        <source id="BoxWormRoot_TheMesh-skin-weights">
+          <float_array id="BoxWormRoot_TheMesh-skin-weights-array" count="29">4.85241e-4 4.85241e-4 0.9990295 0 0 1 7.05123e-5 7.05123e-5 0.999859 0 0 1 1.37985e-5 1.37985e-5 0.9999724 0.003690063 0.003690063 0.9926198 4.57287e-4 0.9995427 1 1 1 1 1 1 1 1 1</float_array>
+          <technique_common>
+            <accessor source="#BoxWormRoot_TheMesh-skin-weights-array" count="29" stride="1">
+              <param name="WEIGHT" type="float"/>
+            </accessor>
+          </technique_common>
+        </source>
+        <joints>
+          <input semantic="JOINT" source="#BoxWormRoot_TheMesh-skin-joints"/>
+          <input semantic="INV_BIND_MATRIX" source="#BoxWormRoot_TheMesh-skin-bind_poses"/>
+        </joints>
+        <vertex_weights count="16">
+          <input semantic="JOINT" source="#BoxWormRoot_TheMesh-skin-joints" offset="0"/>
+          <input semantic="WEIGHT" source="#BoxWormRoot_TheMesh-skin-weights" offset="1"/>
+          <vcount>3 3 3 3 3 3 2 1 1 1 1 1 1 1 1 1 </vcount>
+          <v>0 0 1 1 2 2 0 3 1 4 2 5 0 6 1 7 2 8 0 9 1 10 2 11 0 12 1 13 2 14 0 15 1 16 2 17 1 18 2 19 2 20 1 21 1 22 1 23 1 24 1 25 1 26 1 27 1 28</v>
+        </vertex_weights>
+      </skin>
+    </controller>
+  </library_controllers>
+  <library_animations>
+    <animation id="action_container-BoxWormRoot" name="BoxWormRoot">
+      <animation id="BoxWormRoot_WiggleAnim_UpperArm_pose_matrix" name="BoxWormRoot">
+        <source id="BoxWormRoot_WiggleAnim_UpperArm_pose_matrix-input">
+          <float_array id="BoxWormRoot_WiggleAnim_UpperArm_pose_matrix-input-array" count="60">0.04166662 0.08333331 0.125 0.1666666 0.2083333 0.25 0.2916666 0.3333333 0.375 0.4166666 0.4583333 0.5 0.5416667 0.5833333 0.625 0.6666667 0.7083333 0.75 0.7916667 0.8333333 0.875 0.9166667 0.9583333 1 1.041667 1.083333 1.125 1.166667 1.208333 1.25 1.291667 1.333333 1.375 1.416667 1.458333 1.5 1.541667 1.583333 1.625 1.666667 1.708333 1.75 1.791667 1.833333 1.875 1.916667 1.958333 2 2.041667 2.083333 2.125 2.166667 2.208333 2.25 2.291667 2.333333 2.375 2.416667 2.458333 2.5</float_array>
+          <technique_common>
+            <accessor source="#BoxWormRoot_WiggleAnim_UpperArm_pose_matrix-input-array" count="60" stride="1">
+              <param name="TIME" type="float"/>
+            </accessor>
+          </technique_common>
+        </source>
+        <source id="BoxWormRoot_WiggleAnim_UpperArm_pose_matrix-output">
+          <float_array id="BoxWormRoot_WiggleAnim_UpperArm_pose_matrix-output-array" count="960">-1 -4.76837e-7 -8.74228e-8 0 -8.74228e-8 0 1 1 -4.76837e-7 1 -2.6906e-13 0 0 0 0 1 -0.999999 2.25605e-4 0.001356571 0 0.001355795 -0.00340755 0.9999933 1 2.30226e-4 0.9999942 0.00340724 0 0 0 0 1 -0.9999847 8.81407e-4 0.00546545 0 0.005452847 -0.0137179 0.999891 1 9.56285e-4 0.9999055 0.01371288 0 0 0 0 1 -0.9999219 0.001884111 0.01235673 0 0.01229246 -0.03097642 0.9994445 1 0.002265831 0.9995183 0.03095084 0 0 0 0 1 -0.9997531 0.003084709 0.02200388 0 0.02180078 -0.05506646 0.9982446 1 0.00429097 0.9984779 0.05498562 0 0 0 0 1 -0.9994026 0.004273933 0.03429537 0 0.03380386 -0.08564182 0.9957523 1 0.007192897 0.9963169 0.08544618 0 0 0 0 1 -0.998785 0.005199383 0.04900506 0 0.0480054 -0.1220602 0.9913611 1 0.01113603 0.9925091 0.1216623 0 0 0 0 1 -0.9978191 0.005595951 0.06576926 0 0.06397492 -0.1633373 0.9844939 1 0.01625175 0.9865544 0.162623 0 0 0 0 1 -0.9964452 0.0052278 0.08408032 0 0.08115554 -0.2081456 0.9747252 1 0.02259662 0.9780839 0.2069814 0 0 0 0 1 -0.9946418 0.003934568 0.1033059 0 0.09889731 -0.254878 0.9619026 1 0.03011508 0.9669652 0.2531232 0 0 0 0 1 -0.9924379 0.001669613 0.1227362 0 0.1165142 -0.3017762 0.9462323 1 0.03861871 0.9533773 0.2992996 0 0 0 0 1 -0.9899155 -0.001482235 0.1416511 0 0.1333537 -0.3471026 0.9282976 1 0.04779151 0.937826 0.3437999 0 0 0 0 1 -0.9872011 -0.005314231 0.1593916 0 0.1488607 -0.3893114 0.9089978 1 0.05722232 0.9210908 0.3851198 0 0 0 0 1 -0.9844483 -0.009531791 0.1754156 0 0.1626198 -0.4271747 0.8894249 1 0.0664553 0.9041189 0.4220814 0 0 0 0 1 -0.9818169 -0.01379988 0.1893279 0 0.1743669 -0.459838 0.8707153 1 0.07504438 0.8878956 0.453883 0 0 0 0 1 -0.9794546 -0.01778983 0.2008789 0 0.1839741 -0.4868029 0.8539183 1 0.08259734 0.8733307 0.4800742 0 0 0 0 1 -0.9774834 -0.02121565 0.2099432 0 0.1914166 -0.507861 0.8399029 1 0.08880284 0.8611778 0.5004867 0 0 0 0 1 -0.9759941 -0.02385539 0.2164868 0 0.1967347 -0.5230052 0.8293136 1 0.09344009 0.8519956 0.5151432 0 0 0 0 1 -0.9750447 -0.02555931 0.2205327 0 0.1999995 -0.532344 0.8225631 1 0.09637512 0.8461422 0.5241711 0 0 0 0 1 -0.9746631 -0.02624835 0.2221323 0 0.2012852 -0.5360308 0.8198507 1 0.09755003 0.8437902 0.5277329 0 0 0 0 1 -0.9751434 -0.02538133 0.2201162 0 0.1996642 -0.5313835 0.8232653 1 0.09607054 0.8467511 0.5232428 0 0 0 0 1 -0.9767665 -0.02248102 0.2131238 0 0.1940074 -0.5152282 0.834806 1 0.09104011 0.8567582 0.5076191 0 0 0 0 1 -0.979458 -0.0177839 0.2008625 0 0.1839606 -0.4867647 0.8539429 1 0.08258634 0.8733521 0.4800371 0 0 0 0 1 -0.9830421 -0.01178741 0.1830009 0 0.169048 -0.4450082 0.8794262 1 0.07107077 0.8954489 0.4394545 0 0 0 0 1 -0.9872206 -0.005285424 0.1592717 0 0.1487569 -0.3890271 0.9091365 1 0.05715583 0.9212111 0.3848419 0 0 0 0 1 -0.9915629 6.31328e-4 0.1296247 0 0.1226827 -0.3183213 0.9400109 1 0.04185575 0.9479827 0.3155581 0 0 0 0 1 -0.9955219 0.004648654 0.09441663 0 0.09073213 -0.2333107 0.96816 1 0.02652905 0.9723911 0.2318441 0 0 0 0 1 -0.9984947 0.005409027 0.0545813 0 0.05334276 -0.135817 0.9892969 1 0.0127642 0.9907192 0.135324 0 0 0 0 1 -0.99993 0.001793114 0.01169525 0 0.01163766 -0.02932162 0.9995023 1 0.002135145 0.9995684 0.0292987 0 0 0 0 1 -0.9994603 -0.006769535 -0.03214499 0 -0.0325891 0.08122803 0.9961626 1 -0.004132483 0.9966726 -0.0814048 0 0 0 0 1 -0.9970078 -0.02008794 -0.07464529 0 -0.07710738 0.190136 0.9787251 1 -0.005467811 0.9815522 -0.191116 0 0 0 0 1 -0.9928139 -0.03720741 -0.1137374 0 -0.1196503 0.2919961 0.9489058 1 -0.002095458 0.9556955 -0.2943496 0 0 0 0 1 -0.9873749 -0.05663015 -0.1479318 0 -0.15832 0.3826346 0.9102338 1 0.005057137 0.9221626 -0.3867694 0 0 0 0 1 -0.9813164 -0.07665686 -0.1764704 0 -0.1918436 0.4596028 0.867157 1 0.01463276 0.8848101 -0.4657219 0 0 0 0 1 -0.9752621 -0.09570494 -0.1992596 0 -0.2196144 0.5221231 0.8241099 1 0.02516667 0.8474833 -0.530225 0 0 0 0 1 -0.9697412 -0.1125066 -0.2166664 0 -0.2415639 0.5706571 0.784855 1 0.03534084 0.813445 -0.5805672 0 0 0 0 1 -0.9651473 -0.1261725 -0.2292839 0 -0.2579612 0.606352 0.7521923 1 0.04412075 0.7851228 -0.6177666 0 0 0 0 1 -0.9617389 -0.1361593 -0.2377373 0 -0.2692191 0.6305547 0.7279574 1 0.05078818 0.7641083 -0.6430857 0 0 0 0 1 -0.9596596 -0.1421949 -0.2425575 0 -0.2757502 0.6444735 0.7131732 1 0.05491225 0.7512887 -0.6576854 0 0 0 0 1 -0.9589655 -0.1442006 -0.2441134 0 -0.2778772 0.648986 0.7082384 1 0.05629777 0.7470097 -0.6624252 0 0 0 0 1 -0.9593827 -0.1429956 -0.2431813 0 -0.2766019 0.6462815 0.7112044 1 0.05546449 0.7495816 -0.6595841 0 0 0 0 1 -0.9606348 -0.1393691 -0.2403269 0 -0.2727171 0.6380209 0.7201074 1 0.05297285 0.7573015 -0.6509134 0 0 0 0 1 -0.9626983 -0.1333602 -0.2354295 0 -0.2661219 0.623922 0.7347792 1 0.04889931 0.7700236 -0.6361388 0 0 0 0 1 -0.9655111 -0.1250996 -0.2283386 0 -0.2567166 0.6036608 0.7547783 1 0.04341659 0.7873651 -0.6149563 0 0 0 0 1 -0.9689667 -0.1148288 -0.2189016 0 -0.2444363 0.5769463 0.7793484 1 0.03680287 0.8086701 -0.5871101 0 0 0 0 1 -0.9729118 -0.1029142 -0.2070057 0 -0.2292944 0.5436284 0.8073985 1 0.02944142 0.8329927 -0.5525001 0 0 0 0 1 -0.9771494 -0.08984703 -0.1926305 0 -0.2114323 0.503827 0.837529 1 0.02180293 0.8591192 -0.5113108 0 0 0 0 1 -0.9814524 -0.07621973 -0.1759028 0 -0.1911641 0.4580587 0.8681236 1 0.01440564 0.8856483 -0.4641332 0 0 0 0 1 -0.9855855 -0.06267641 -0.1571399 0 -0.1690004 0.407325 0.8975106 1 0.007754253 0.91113 -0.412046 0 0 0 0 1 -0.9893355 -0.04984047 -0.1368621 0 -0.1456371 0.3531188 0.9241737 1 0.002267344 0.93425 -0.3566116 0 0 0 0 1 -0.9925404 -0.03823606 -0.1157653 0 -0.1219032 0.2973289 0.946961 1 -0.001787691 0.9540092 -0.299772 0 0 0 0 1 -0.9951102 -0.02822481 -0.09465315 0 -0.0986767 0.2420531 0.9652322 1 -0.004332412 0.9698524 -0.2436546 0 0 0 0 1 -0.9970323 -0.01997641 -0.07434794 0 -0.07678991 0.1893678 0.9788989 1 -0.005475787 0.981703 -0.1903397 0 0 0 0 1 -0.998362 -0.01347913 -0.05560294 0 -0.05695079 0.1411175 0.9883534 1 -0.005475592 0.9899011 -0.141654 0 0 0 0 1 -0.9992008 -0.008582414 -0.0390394 0 -0.03969702 0.09877475 0.9943177 1 -0.00467754 0.9950728 -0.0990365 0 0 0 0 1 -0.9996718 -0.005054907 -0.02511747 0 -0.0253876 0.06338864 0.9976659 1 -0.003450947 0.9979761 -0.06349616 0 0 0 0 1 -0.9998966 -0.002641077 -0.01413778 0 -0.0142229 0.03560852 0.9992646 1 -0.002135709 0.9993623 -0.0356424 0 0 0 0 1 -0.9999798 -0.001106238 -0.006264549 0 -0.006281205 0.0157561 0.9998561 1 -0.001007374 0.9998752 -0.01576273 0 0 0 0 1 -0.9999987 -2.65789e-4 -0.001557032 0 -0.00155806 0.003912676 0.9999911 1 -2.59695e-4 0.9999923 -0.003913085 0 0 0 0 1 -1 -4.69387e-7 -2.22302e-8 0 -2.22302e-8 -5.68107e-8 1 1 -4.69387e-7 1 5.68104e-8 0 0 0 0 1</float_array>
+          <technique_common>
+            <accessor source="#BoxWormRoot_WiggleAnim_UpperArm_pose_matrix-output-array" count="60" stride="16">
+              <param name="TRANSFORM" type="float4x4"/>
+            </accessor>
+          </technique_common>
+        </source>
+        <source id="BoxWormRoot_WiggleAnim_UpperArm_pose_matrix-interpolation">
+          <Name_array id="BoxWormRoot_WiggleAnim_UpperArm_pose_matrix-interpolation-array" count="60">LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR</Name_array>
+          <technique_common>
+            <accessor source="#BoxWormRoot_WiggleAnim_UpperArm_pose_matrix-interpolation-array" count="60" stride="1">
+              <param name="INTERPOLATION" type="name"/>
+            </accessor>
+          </technique_common>
+        </source>
+        <sampler id="BoxWormRoot_WiggleAnim_UpperArm_pose_matrix-sampler">
+          <input semantic="INPUT" source="#BoxWormRoot_WiggleAnim_UpperArm_pose_matrix-input"/>
+          <input semantic="OUTPUT" source="#BoxWormRoot_WiggleAnim_UpperArm_pose_matrix-output"/>
+          <input semantic="INTERPOLATION" source="#BoxWormRoot_WiggleAnim_UpperArm_pose_matrix-interpolation"/>
+        </sampler>
+        <channel source="#BoxWormRoot_WiggleAnim_UpperArm_pose_matrix-sampler" target="BoxWormRoot_UpperArm/transform"/>
+      </animation>
+    </animation>
+  </library_animations>
+  <library_visual_scenes>
+    <visual_scene id="Scene" name="Scene">
+      <node id="BoxWormRoot" name="BoxWormRoot" type="NODE">
+        <matrix sid="transform">1 0 0 0 0 1 0 0 0 0 1 -1 0 0 0 1</matrix>
+        <node id="BoxWormRoot_Root" name="Root" sid="Root" type="JOINT">
+          <matrix sid="transform">-1 0 -4.76837e-7 0 0 -1 0 1 -4.76837e-7 0 1 3 0 0 0 1</matrix>
+          <node id="BoxWormRoot_UpperArm" name="UpperArm" sid="UpperArm" type="JOINT">
+            <matrix sid="transform">-1 -4.76837e-7 -8.74228e-8 0 -8.74228e-8 0 1 1 -4.76837e-7 1 -2.6906e-13 0 0 0 0 1</matrix>
+            <node id="BoxWormRoot_UpperArmDanglyBit" name="UpperArmDanglyBit" sid="UpperArmDanglyBit" type="JOINT">
+              <matrix sid="transform">1 0 -2.21261e-9 0 1.56455e-9 0.7071068 0.7071068 3 1.56455e-9 -0.7071068 0.7071068 0 0 0 0 1</matrix>
+              <extra>
+                <technique profile="blender">
+                  <connect sid="connect" type="bool">1</connect>
+                  <layer sid="layer" type="string">0</layer>
+                  <roll sid="roll" type="float">0</roll>
+                  <tip_x sid="tip_x" type="float">0</tip_x>
+                  <tip_y sid="tip_y" type="float">1</tip_y>
+                  <tip_z sid="tip_z" type="float">1</tip_z>
+                </technique>
+              </extra>
+            </node>
+            <extra>
+              <technique profile="blender">
+                <connect sid="connect" type="bool">1</connect>
+                <layer sid="layer" type="string">0</layer>
+              </technique>
+            </extra>
+          </node>
+          <node id="BoxWormRoot_LowerArm" name="LowerArm" sid="LowerArm" type="JOINT">
+            <matrix sid="transform">-1 4.76837e-7 -8.74228e-8 0 8.74228e-8 0 -1 1 -4.76837e-7 -1 -2.6906e-13 0 0 0 0 1</matrix>
+            <extra>
+              <technique profile="blender">
+                <connect sid="connect" type="bool">1</connect>
+                <layer sid="layer" type="string">0</layer>
+                <tip_x sid="tip_x" type="float">0</tip_x>
+                <tip_y sid="tip_y" type="float">0</tip_y>
+                <tip_z sid="tip_z" type="float">-3</tip_z>
+              </technique>
+            </extra>
+          </node>
+          <extra>
+            <technique profile="blender">
+              <layer sid="layer" type="string">0</layer>
+              <roll sid="roll" type="float">4.76837e-7</roll>
+            </technique>
+          </extra>
+        </node>
+        <node id="TheMesh" name="TheMesh" type="NODE">
+          <matrix sid="transform">1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+          <instance_controller url="#BoxWormRoot_TheMesh-skin">
+            <skeleton>#BoxWormRoot_Root</skeleton>
+            <bind_material>
+              <technique_common>
+                <instance_material symbol="Material-material" target="#Material-material">
+                  <bind_vertex_input semantic="UVMap" input_semantic="TEXCOORD" input_set="0"/>
+                </instance_material>
+              </technique_common>
+            </bind_material>
+          </instance_controller>
+        </node>
+      </node>
+    </visual_scene>
+  </library_visual_scenes>
+  <scene>
+    <instance_visual_scene url="#Scene"/>
+  </scene>
+</COLLADA>

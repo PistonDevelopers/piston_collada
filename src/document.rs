@@ -338,6 +338,13 @@ impl ColladaDocument {
     /// Construct an Animation struct for the given <animation> element if possible
     ///
     fn get_animation(&self, animation_element: &Element) -> Option<Animation> {
+
+        // Note: For Blender 2.27.0 the elements are found inside the "animation_element"
+        //       For Blender 3.0.1 the elements are found one layer deeper under "animation_element/animation"
+        let animation_element = animation_element
+            .get_child("animation", self.get_ns())
+            .unwrap_or(animation_element);
+
         let channel_element = animation_element
             .get_child("channel", self.get_ns())
             .expect("Missing channel element in animation element");
@@ -457,7 +464,12 @@ impl ColladaDocument {
                 parent_index_stack.pop();
             }
 
-            let joint_name = joint_element.get_attribute("id", None).unwrap().to_string();
+            // Note: For Blender 2.72.0 "id" and "name" are identical
+            //       For Blender 3.0.1 "id" is a combination of the root element name and the joint name.
+            let joint_name = joint_element
+                .get_attribute("name", None)
+                .unwrap()
+                .to_string();
 
             let mut joint_names_with_bind_pose = bind_data
                 .joint_names
@@ -1036,8 +1048,9 @@ impl ColladaDocument {
 }
 
 #[test]
-fn test_get_obj_set() {
-    let collada_document = ColladaDocument::from_path(Path::new("test_assets/test.dae")).unwrap();
+fn test_get_obj_set_blender_2_72_0() {
+    let collada_document =
+        ColladaDocument::from_path(Path::new("test_assets/test_blender_2_72_0.dae")).unwrap();
     let obj_set = collada_document.get_obj_set().unwrap();
     assert_eq!(obj_set.objects.len(), 1);
 
@@ -1046,7 +1059,40 @@ fn test_get_obj_set() {
     assert_eq!(object.name, "BoxyWorm");
     assert_eq!(object.vertices.len(), 16);
     assert_eq!(object.tex_vertices.len(), 84);
-    assert_eq!(object.normals.len(), 28);
+    assert_eq!(object.normals.len(), 28); 
+    assert_eq!(object.geometry.len(), 1);
+
+    let geometry = &object.geometry[0];
+
+    let prim = &geometry.mesh[0];
+    if let PrimitiveElement::Polylist(polylist) = prim {
+        assert_eq!(polylist.shapes.len(), 28);
+        let shape = polylist.shapes[1];
+        if let Shape::Triangle((position_index, Some(texture_index), Some(normal_index)), _, _) =
+            shape
+        {
+            assert_eq!(position_index, 7);
+            assert_eq!(texture_index, 3);
+            assert_eq!(normal_index, 1);
+        } else {
+            assert!(false);
+        }
+    }
+}
+
+#[test]
+fn test_get_obj_set_blender_3_0_1() {
+    let collada_document =
+        ColladaDocument::from_path(Path::new("test_assets/test_blender_3_0_1.dae")).unwrap();
+    let obj_set = collada_document.get_obj_set().unwrap();
+    assert_eq!(obj_set.objects.len(), 1);
+
+    let object = &obj_set.objects[0];
+    assert_eq!(object.id, "BoxyWorm-mesh");
+    assert_eq!(object.name, "BoxyWorm");
+    assert_eq!(object.vertices.len(), 16);
+    assert_eq!(object.tex_vertices.len(), 84);
+    assert_eq!(object.normals.len(), 19); // differs to blender 2_72_0
     assert_eq!(object.geometry.len(), 1);
 
     let geometry = &object.geometry[0];
@@ -1107,9 +1153,9 @@ fn test_get_obj_set_triangles_geometry() {
     }
 }
 
-#[test]
-fn test_get_bind_data_set() {
-    let collada_document = ColladaDocument::from_path(Path::new("test_assets/test.dae")).unwrap();
+
+fn _test_get_bind_data_set(path: &str) {
+    let collada_document = ColladaDocument::from_path(Path::new(path)).unwrap();
     let bind_data_set = collada_document.get_bind_data_set().unwrap();
     let bind_data = &bind_data_set.bind_data[0];
 
@@ -1123,8 +1169,17 @@ fn test_get_bind_data_set() {
 }
 
 #[test]
-fn test_get_skeletons() {
-    let collada_document = ColladaDocument::from_path(Path::new("test_assets/test.dae")).unwrap();
+fn test_get_bind_data_set_blender_2_72_0() {
+    _test_get_bind_data_set("test_assets/test_blender_2_72_0.dae");
+}
+
+#[test]
+fn test_get_bind_data_set_blender_3_0_1() {
+    _test_get_bind_data_set("test_assets/test_blender_3_0_1.dae");
+}
+
+fn _test_get_skeletons(path: &str) {
+    let collada_document = ColladaDocument::from_path(Path::new(path)).unwrap();
     let skeletons = collada_document.get_skeletons().unwrap();
     assert_eq!(skeletons.len(), 1);
 
@@ -1150,8 +1205,19 @@ fn test_get_skeletons() {
 }
 
 #[test]
-fn test_get_animations() {
-    let collada_document = ColladaDocument::from_path(Path::new("test_assets/test.dae")).unwrap();
+fn test_get_skeletons_blender_2_72_0() {
+    _test_get_skeletons("test_assets/test_blender_2_72_0.dae");
+}
+
+#[test]
+fn test_get_skeletons_blender_3_0_1() {
+    _test_get_skeletons("test_assets/test_blender_3_0_1.dae");
+}
+
+#[test]
+fn test_get_animations_blender_2_72_0() {
+    let collada_document =
+        ColladaDocument::from_path(Path::new("test_assets/test_blender_2_72_0.dae")).unwrap();
     let animations = collada_document.get_animations().unwrap();
     assert_eq!(animations.len(), 4);
 
@@ -1164,6 +1230,19 @@ fn test_get_animations() {
     assert_eq!(animation.target, "LowerArm/transform");
     assert_eq!(animation.sample_times.len(), 4);
     assert_eq!(animation.sample_poses.len(), 4);
+}
+
+#[test]
+fn test_get_animations_blender_3_0_1() {
+    let collada_document =
+        ColladaDocument::from_path(Path::new("test_assets/test_blender_3_0_1.dae")).unwrap();
+    let animations = collada_document.get_animations().unwrap();
+    assert_eq!(animations.len(), 1);
+
+    let animation = &animations[0];
+    assert_eq!(animation.target, "BoxWormRoot_UpperArm/transform");
+    assert_eq!(animation.sample_times.len(), 60);
+    assert_eq!(animation.sample_poses.len(), 60);
 }
 
 #[test]
