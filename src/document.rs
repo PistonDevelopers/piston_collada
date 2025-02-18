@@ -464,6 +464,11 @@ impl ColladaDocument {
                 parent_index_stack.pop();
             }
 
+            let joint_id = joint_element
+                .get_attribute("id", None)
+                .unwrap()
+                .to_string();
+
             // Note: For Blender 2.72.0 "id" and "name" are identical
             //       For Blender 3.0.1 "id" is a combination of the root element name and the joint name.
             let joint_name = joint_element
@@ -483,6 +488,7 @@ impl ColladaDocument {
 
             joints.push(Joint {
                 inverse_bind_pose,
+                id: joint_id,
                 name: joint_name,
                 parent_index: *parent_index_stack.last().unwrap(),
             });
