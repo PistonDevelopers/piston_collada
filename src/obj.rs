@@ -114,7 +114,7 @@ pub struct JointWeights {
 /// A single 3-dimensional normal
 pub type Normal = Vertex;
 
-/// A single 2-dimensional point on a texture. "Texure Vertex".
+/// A single 2-dimensional point on a texture. "Texture Vertex".
 #[allow(missing_docs)]
 #[derive(Clone, Copy, Debug)]
 pub struct TVertex {

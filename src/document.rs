@@ -745,7 +745,7 @@ impl ColladaDocument {
         })?;
         input
             .get_attribute("offset", None)
-            .expect("input is missing offest")
+            .expect("input is missing offset")
             .parse::<usize>()
             .ok()
     }
