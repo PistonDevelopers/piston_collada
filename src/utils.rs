@@ -68,15 +68,12 @@ impl<'a> Iterator for PreOrderIterator<'a> {
     type Item = &'a Element;
     fn next(&mut self) -> Option<&'a Element> {
         let current_element = self.stack.pop();
-        match current_element {
-            Some(element) => {
-                for child in element.children.iter().rev() {
-                    if let ElementNode(ref e) = *child {
-                        self.stack.push(e);
-                    }
+        if let Some(element) = current_element {
+            for child in element.children.iter().rev() {
+                if let ElementNode(ref e) = *child {
+                    self.stack.push(e);
                 }
             }
-            None => (),
         }
         current_element
     }

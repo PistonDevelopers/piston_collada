@@ -100,13 +100,13 @@ impl ColladaDocument {
             Err(_) => return Err("Failed to read COLLADA file."),
         };
 
-        ColladaDocument::from_str(&xml_string)
+        ColladaDocument::from_string(&xml_string)
     }
 
     ///
     /// Construct a ColladaDocument from an XML string
     ///
-    pub fn from_str(xml_string: &str) -> Result<ColladaDocument, &'static str> {
+    pub fn from_string(xml_string: &str) -> Result<ColladaDocument, &'static str> {
         match xml_string.parse() {
             Ok(root_element) => Ok(ColladaDocument { root_element }),
             Err(_) => Err("Error while parsing COLLADA document."),
@@ -161,7 +161,6 @@ impl ColladaDocument {
             .content_str()
             .as_str()
             .parse()
-            .ok()
             .expect("could not parse index_of_refraction");
 
         LambertEffect {
@@ -209,7 +208,6 @@ impl ColladaDocument {
             .content_str()
             .as_str()
             .parse()
-            .ok()
             .expect("could not parse shininess");
         let index_of_refraction: f32 = phong
             .get_child("index_of_refraction", ns)
@@ -219,7 +217,6 @@ impl ColladaDocument {
             .content_str()
             .as_str()
             .parse()
-            .ok()
             .expect("could not parse index_of_refraction");
 
         PhongEffect {
@@ -307,7 +304,7 @@ impl ColladaDocument {
             .flat_map(|el| {
                 let id = el
                     .get_attribute("id", None)
-                    .expect(&format!("image is missing its id. {:#?}", el))
+                    .unwrap_or_else(|| panic!("image is missing its id. {:#?}", el))
                     .to_string();
                 let file_name = el
                     .get_child("init_from", ns)
@@ -427,7 +424,7 @@ impl ColladaDocument {
     }
 
     ///
-    ///
+    /// Populates a Skeleton Struct from the Collada document
     ///
     pub fn get_skeletons(&self) -> Option<Vec<Skeleton>> {
         let library_visual_scenes = (self
@@ -753,7 +750,6 @@ impl ColladaDocument {
             .ok()
     }
 
-    ///
     fn get_input<'a>(&'a self, parent: &'a Element, semantic: &str) -> Option<&'a Element> {
         let mut inputs = parent.get_children("input", self.get_ns());
         match inputs.find(|i| {
@@ -944,24 +940,21 @@ impl ColladaDocument {
     fn get_mesh_elements(&self, mesh_element: &xml::Element) -> Option<Vec<PrimitiveElement>> {
         let mut prims = vec![];
         for child in &mesh_element.children {
-            match child {
-                xml::Xml::ElementNode(el) => {
-                    if el.name == GeometryBindingType::Polylist.name() {
-                        let shapes = self
-                            .get_polylist_shape(el)
-                            .expect("Polylist had no shapes.");
-                        let material = self.get_material(el);
-                        let polylist = Polylist { shapes, material };
-                        prims.push(PrimitiveElement::Polylist(polylist))
-                    } else if el.name == GeometryBindingType::Triangles.name() {
-                        let material = self.get_material(el);
-                        let triangles = self
-                            .get_triangles(el, material)
-                            .expect("Triangles had no indices.");
-                        prims.push(PrimitiveElement::Triangles(triangles))
-                    }
+            if let xml::Xml::ElementNode(el) = child {
+                if el.name == GeometryBindingType::Polylist.name() {
+                    let shapes = self
+                        .get_polylist_shape(el)
+                        .expect("Polylist had no shapes.");
+                    let material = self.get_material(el);
+                    let polylist = Polylist { shapes, material };
+                    prims.push(PrimitiveElement::Polylist(polylist))
+                } else if el.name == GeometryBindingType::Triangles.name() {
+                    let material = self.get_material(el);
+                    let triangles = self
+                        .get_triangles(el, material)
+                        .expect("Triangles had no indices.");
+                    prims.push(PrimitiveElement::Triangles(triangles))
                 }
-                _ => {}
             }
         }
 
