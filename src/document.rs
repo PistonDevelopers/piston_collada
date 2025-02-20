@@ -1169,7 +1169,6 @@ fn test_get_obj_set_triangles_geometry() {
     }
 }
 
-
 fn _test_get_bind_data_set(path: &str) {
     let collada_document = ColladaDocument::from_path(Path::new(path)).unwrap();
     let bind_data_set = collada_document.get_bind_data_set().unwrap();
@@ -1230,10 +1229,9 @@ fn test_get_skeletons_blender_3_0_1() {
     _test_get_skeletons("test_assets/test_blender_3_0_1.dae");
 }
 
-
 //
 // Note: The Interface of the animation has been changed to support multiple simultaneous
-//       joint transformations at the same time, so supporting blender 2.72.0 makes no more 
+//       joint transformations at the same time, so supporting blender 2.72.0 makes no more
 //       sense here
 //
 #[test]

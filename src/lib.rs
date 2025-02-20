@@ -28,7 +28,7 @@ pub struct Skeleton {
 #[derive(Debug, Clone)]
 pub struct Joint {
     ///
-    /// Id of joint 
+    /// Id of joint
     ///
     pub id: String,
 
