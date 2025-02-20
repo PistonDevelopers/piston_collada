@@ -63,7 +63,7 @@ impl Joint {
 /// (eg colors, texture offsets, etc), but we'll leave those unsupported for now.
 ///
 #[derive(Debug)]
-pub struct Animation {
+pub struct AnimationChannel {
     ///
     /// The node (joint) this animation is targeting
     ///
@@ -79,6 +79,26 @@ pub struct Animation {
     /// Column-major.
     ///
     pub sample_poses: Vec<Matrix4<f32>>,
+}
+
+///
+/// A COLLADA animation consists of mapping of sample times to pose transforms
+/// for a single node in the scene (usually a skeleton joint)
+///
+/// Note - COLLADA supports animating arbitrary 'outputs', not just pose transforms,
+/// (eg colors, texture offsets, etc), but we'll leave those unsupported for now.
+///
+#[derive(Debug)]
+pub struct Animation {
+    ///
+    /// The name of the action
+    ///
+    pub name: String,
+
+    ///
+    /// The animation split into multiple joints
+    ///
+    pub animation_channels: Vec<AnimationChannel>,
 }
 
 ///

@@ -12,7 +12,7 @@ use vecmath;
 use xml;
 
 use crate::{
-    Animation, BindData, BindDataSet, Joint, JointIndex, Skeleton, VertexWeight,
+    Animation, AnimationChannel, BindData, BindDataSet, Joint, JointIndex, Skeleton, VertexWeight,
     ROOT_JOINT_PARENT_INDEX,
 };
 
@@ -338,50 +338,63 @@ impl ColladaDocument {
     /// Construct an Animation struct for the given <animation> element if possible
     ///
     fn get_animation(&self, animation_element: &Element) -> Option<Animation> {
+        let animation_name = animation_element
+            .get_attribute("name", None)
+            .expect("Missing target attribute in animation name element");
 
-        // Note: For Blender 2.27.0 the elements are found inside the "animation_element"
-        //       For Blender 3.0.1 the elements are found one layer deeper under "animation_element/animation"
-        let animation_element = animation_element
-            .get_child("animation", self.get_ns())
-            .unwrap_or(animation_element);
+        let mut animation_channels = Vec::new();
 
-        let channel_element = animation_element
-            .get_child("channel", self.get_ns())
-            .expect("Missing channel element in animation element");
+        let animation_elements = animation_element.get_children("animation", self.get_ns());
+        for animation_element in animation_elements {
+            // Note: For Blender 2.27.0 the elements are found inside the "animation_element"
+            //       For Blender 3.0.1 the elements are found one layer deeper under "animation_element/animation"
+            let animation_element = animation_element
+                .get_child("animation", self.get_ns())
+                .unwrap_or(animation_element);
 
-        let target = channel_element
-            .get_attribute("target", None)
-            .expect("Missing target attribute in animation channel element");
+            let channel_element = animation_element
+                .get_child("channel", self.get_ns())
+                .expect("Missing channel element in animation element");
 
-        let sampler_element = animation_element
-            .get_child("sampler", self.get_ns())
-            .expect("Missing sampler element in animation element");
+            let target = channel_element
+                .get_attribute("target", None)
+                .expect("Missing target attribute in animation channel element");
 
-        // Note: Assuming INPUT for animation is 'time'
-        let time_input = self
-            .get_input(sampler_element, "INPUT")
-            .expect("Missing input element for animation INPUT (sample time)");
+            let sampler_element = animation_element
+                .get_child("sampler", self.get_ns())
+                .expect("Missing sampler element in animation element");
 
-        let sample_times = self
-            .get_array_for_input(animation_element, time_input)
-            .expect("Missing / invalid source for animation INPUT");
+            // Note: Assuming INPUT for animation is 'time'
+            let time_input = self
+                .get_input(sampler_element, "INPUT")
+                .expect("Missing input element for animation INPUT (sample time)");
 
-        // Note: Assuming OUTPUT for animation is a pose matrix
-        let pose_input = self
-            .get_input(sampler_element, "OUTPUT")
-            .expect("Missing input element for animation OUTPUT (pose transform)");
+            let sample_times = self
+                .get_array_for_input(animation_element, time_input)
+                .expect("Missing / invalid source for animation INPUT");
 
-        let sample_poses_flat = self
-            .get_array_for_input(animation_element, pose_input)
-            .expect("Missing / invalid source for animation OUTPUT");
+            // Note: Assuming OUTPUT for animation is a pose matrix
+            let pose_input = self
+                .get_input(sampler_element, "OUTPUT")
+                .expect("Missing input element for animation OUTPUT (pose transform)");
 
-        // Convert flat array of floats into array of matrices
-        let sample_poses = to_matrix_array(sample_poses_flat);
+            let sample_poses_flat = self
+                .get_array_for_input(animation_element, pose_input)
+                .expect("Missing / invalid source for animation OUTPUT");
+
+            // Convert flat array of floats into array of matrices
+            let sample_poses = to_matrix_array(sample_poses_flat);
+
+            animation_channels.push(AnimationChannel {
+                target: target.to_string(),
+                sample_times,
+                sample_poses,
+            });
+        }
 
         Some(Animation {
-            target: target.to_string(),
-            sample_times,
-            sample_poses,
+            name: animation_name.to_string(),
+            animation_channels,
         })
     }
 
@@ -464,10 +477,7 @@ impl ColladaDocument {
                 parent_index_stack.pop();
             }
 
-            let joint_id = joint_element
-                .get_attribute("id", None)
-                .unwrap()
-                .to_string();
+            let joint_id = joint_element.get_attribute("id", None).unwrap().to_string();
 
             // Note: For Blender 2.72.0 "id" and "name" are identical
             //       For Blender 3.0.1 "id" is a combination of the root element name and the joint name.
@@ -1065,7 +1075,7 @@ fn test_get_obj_set_blender_2_72_0() {
     assert_eq!(object.name, "BoxyWorm");
     assert_eq!(object.vertices.len(), 16);
     assert_eq!(object.tex_vertices.len(), 84);
-    assert_eq!(object.normals.len(), 28); 
+    assert_eq!(object.normals.len(), 28);
     assert_eq!(object.geometry.len(), 1);
 
     let geometry = &object.geometry[0];
@@ -1220,24 +1230,12 @@ fn test_get_skeletons_blender_3_0_1() {
     _test_get_skeletons("test_assets/test_blender_3_0_1.dae");
 }
 
-#[test]
-fn test_get_animations_blender_2_72_0() {
-    let collada_document =
-        ColladaDocument::from_path(Path::new("test_assets/test_blender_2_72_0.dae")).unwrap();
-    let animations = collada_document.get_animations().unwrap();
-    assert_eq!(animations.len(), 4);
 
-    let animation = &animations[1];
-    assert_eq!(animation.target, "UpperArm/transform");
-    assert_eq!(animation.sample_times.len(), 4);
-    assert_eq!(animation.sample_poses.len(), 4);
-
-    let animation = &animations[3];
-    assert_eq!(animation.target, "LowerArm/transform");
-    assert_eq!(animation.sample_times.len(), 4);
-    assert_eq!(animation.sample_poses.len(), 4);
-}
-
+//
+// Note: The Interface of the animation has been changed to support multiple simultaneous
+//       joint transformations at the same time, so supporting blender 2.72.0 makes no more 
+//       sense here
+//
 #[test]
 fn test_get_animations_blender_3_0_1() {
     let collada_document =
@@ -1245,7 +1243,7 @@ fn test_get_animations_blender_3_0_1() {
     let animations = collada_document.get_animations().unwrap();
     assert_eq!(animations.len(), 1);
 
-    let animation = &animations[0];
+    let animation = &animations[0].animation_channels[0];
     assert_eq!(animation.target, "BoxWormRoot_UpperArm/transform");
     assert_eq!(animation.sample_times.len(), 60);
     assert_eq!(animation.sample_poses.len(), 60);
