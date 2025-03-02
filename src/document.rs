@@ -673,37 +673,33 @@ impl ColladaDocument {
                     let mut joint_weights = vec![
                         JointWeights {
                             joints: [0; 4],
-                            weights: [0.0; 4]
+                            weights: [1.0, 0.0, 0.0, 0.0],
+                            size: 0
                         };
                         positions.len()
                     ];
+                    
+                    // add joint index and weight to each vertex
+                    for bind_data_vertex_weight in bind_data.vertex_weights.iter() {
+                        let vertex_index = bind_data_vertex_weight.vertex;
+                        let joint_index = bind_data_vertex_weight.joint as usize;
+                        let weight_index = bind_data_vertex_weight.weight;
 
-                    for vertex_weight in bind_data.vertex_weights.iter() {
-                        let joint_name = &bind_data.joint_names[vertex_weight.joint as usize];
-                        let vertex_joint_weights: &mut JointWeights =
-                            &mut joint_weights[vertex_weight.vertex];
+                        let max_weights = 4;
+                        assert!(vertex_index < joint_weights.len());
+                        assert!(joint_index < bind_data.joint_names.len());
+                        assert!(weight_index <  bind_data.weights.len());
+                        
+                        let _joint_name = &bind_data.joint_names[joint_index as usize];
+                        let vertex = &mut joint_weights[vertex_index];
+                        let weight = bind_data.weights[weight_index];
+                        assert!(vertex.size < max_weights, "Too many joint influences for vertex");
+                        assert_eq!(vertex.weights.iter().len(), max_weights);
 
-                        if let Some((next_index, _)) = vertex_joint_weights
-                            .weights
-                            .iter()
-                            .enumerate()
-                            .find(|&(_, weight)| *weight == 0.0)
-                        {
-                            if let Some((joint_index, _)) = skeleton
-                                .joints
-                                .iter()
-                                .enumerate()
-                                .find(|&(_, j)| &j.name == joint_name)
-                            {
-                                vertex_joint_weights.joints[next_index] = joint_index;
-                                vertex_joint_weights.weights[next_index] =
-                                    bind_data.weights[vertex_weight.weight];
-                            } else {
-                                error!("Couldn't find joint: {}", joint_name);
-                            }
-                        } else {
-                            error!("Too many joint influences for vertex");
-                        }
+                        let index = vertex.size;
+                        vertex.joints[index] = joint_index as usize;
+                        vertex.weights[index] = weight;
+                        vertex.size += 1;
                     }
                     joint_weights
                 } else {

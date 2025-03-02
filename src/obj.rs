@@ -110,6 +110,8 @@ pub struct JointWeights {
     /// Weights for each joint attached to this vertex.
     /// Maximum of 4 joints
     pub weights: [f32; 4],
+    /// Number of joints attached to this vertex
+    pub size: usize,
 }
 /// A single 3-dimensional normal
 pub type Normal = Vertex;
