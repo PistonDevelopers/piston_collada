@@ -5,6 +5,7 @@ use xml::Xml::{CharacterNode, ElementNode};
 pub fn parse_string_to_vector<T: FromStr>(string: &str) -> Vec<T> {
     string
         .trim()
+        .replace("\r\n", "\n")
         .split(&[' ', '\n'][..])
         .map(|s| s.parse().ok().expect("Error parsing array in COLLADA file"))
         .collect()
