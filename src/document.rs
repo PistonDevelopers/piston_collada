@@ -45,23 +45,26 @@ impl GeometryBindingType {
 pub struct PhongEffect {
     pub emission: [f32; 4],
     pub ambient: [f32; 4],
-    pub diffuse: [f32; 4],
-    pub specular: [f32; 4],
+    pub diffuse: Diffuse,
+    pub specular: Specular,
     pub shininess: f32,
-    pub index_of_refraction: f32,
+    // pub index_of_refraction: f32,
 }
 ///
 /// Can be a plain color or point to a texture in the images library
 ///
 #[derive(Clone, Debug, PartialEq)]
-pub enum LambertDiffuse {
+pub enum Diffuse {
     Color([f32; 4]),
     Texture(String),
 }
+
+type Specular = Diffuse;
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct LambertEffect {
     pub emission: [f32; 4],
-    pub diffuse: LambertDiffuse,
+    pub diffuse: Diffuse,
     pub index_of_refraction: f32,
 }
 
@@ -138,7 +141,7 @@ impl ColladaDocument {
 
         let diffuse;
         if let Some(texture) = diffuse_texture {
-            diffuse = LambertDiffuse::Texture(
+            diffuse = Diffuse::Texture(
                 texture
                     .get_attribute("texture", None)
                     .expect("No texture attribute on texture")
@@ -150,7 +153,7 @@ impl ColladaDocument {
                 .expect("diffuse is missing color");
             let diffuse_color = ColladaDocument::get_color(diffuse_element_color)
                 .expect("could not get diffuse color.");
-            diffuse = LambertDiffuse::Color(diffuse_color);
+            diffuse = Diffuse::Color(diffuse_color);
         }
 
         let index_of_refraction: f32 = lamb
@@ -186,21 +189,54 @@ impl ColladaDocument {
             .expect("ambient is missing color");
         let ambient =
             ColladaDocument::get_color(ambient_color).expect("could not get ambient color.");
-        let diffuse = phong
+        
+        let diffuse_element = phong
             .get_child("diffuse", ns)
             .expect("phong is missing diffuse");
-        let diffuse_color = diffuse
-            .get_child("color", ns)
-            .expect("diffuse is missing color");
-        let diffuse =
-            ColladaDocument::get_color(diffuse_color).expect("could not get diffuse color.");
-        let specular_color = phong
-            .get_child("specular", ns)
-            .expect("phong is missing specular")
+
+        let diffuse_texture = diffuse_element.get_child("texture", ns);
+
+        let diffuse;
+        if let Some(texture) = diffuse_texture {
+            diffuse = Diffuse::Texture(
+                texture
+                    .get_attribute("texture", None)
+                    .expect("No texture attribute on texture")
+                    .to_string(),
+            );
+        } else {
+            let diffuse_element_color = diffuse_element
+                .get_child("color", ns)
+                .expect("diffuse is missing color");
+            let diffuse_color = ColladaDocument::get_color(diffuse_element_color)
+                .expect("could not get diffuse color.");
+            diffuse = Diffuse::Color(diffuse_color);
+        }
+
+
+    let specular_element = phong
+        .get_child("specular", ns)
+        .expect("phong is missing specular");
+
+    let specular_texture = specular_element.get_child("texture", ns);
+
+    let specular;
+    if let Some(texture) = specular_texture {
+        specular = Specular::Texture(
+            texture
+                .get_attribute("texture", None)
+                .expect("No texture attribute on texture")
+                .to_string(),
+        );
+    } else {
+        let specular_element_color = specular_element
             .get_child("color", ns)
             .expect("specular is missing color");
-        let specular =
-            ColladaDocument::get_color(specular_color).expect("could not get specular color.");
+        let specular_color = ColladaDocument::get_color(specular_element_color)
+            .expect("could not get specular color.");
+        specular = Specular::Color(specular_color);
+    }
+
         let shininess: f32 = phong
             .get_child("shininess", ns)
             .expect("phong is missing shininess")
@@ -211,22 +247,22 @@ impl ColladaDocument {
             .parse()
             .ok()
             .expect("could not parse shininess");
-        let index_of_refraction: f32 = phong
-            .get_child("index_of_refraction", ns)
-            .expect("phong is missing index_of_refraction")
-            .get_child("float", ns)
-            .expect("index_of_refraction is missing float")
-            .content_str()
-            .as_str()
-            .parse()
-            .ok()
-            .expect("could not parse index_of_refraction");
+        // let index_of_refraction: f32 = phong
+        //     .get_child("index_of_refraction", ns)
+        //     .expect("phong is missing index_of_refraction")
+        //     .get_child("float", ns)
+        //     .expect("index_of_refraction is missing float")
+        //     .content_str()
+        //     .as_str()
+        //     .parse()
+        //     .ok()
+        //     .expect("could not parse index_of_refraction");
 
         PhongEffect {
             ambient,
             diffuse,
             emission,
-            index_of_refraction,
+            // index_of_refraction,
             shininess,
             specular,
         }
@@ -446,7 +482,6 @@ impl ColladaDocument {
         let mut parent_index_stack: Vec<JointIndex> = vec![ROOT_JOINT_PARENT_INDEX];
         let mut joints = Vec::new();
         let mut bind_poses = Vec::new();
-
         for (joint_index, (joint_element, depth)) in pre_order_with_depth_iter(root_element)
             .filter(|&(e, _)| e.name == "node" && has_attribute_with_value(e, "type", "JOINT"))
             .enumerate()
