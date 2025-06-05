@@ -48,8 +48,8 @@ pub struct PhongEffect {
     pub diffuse: Diffuse,
     pub specular: Specular,
     pub shininess: f32,
-    // pub index_of_refraction: f32,
 }
+
 ///
 /// Can be a plain color or point to a texture in the images library
 ///
@@ -247,17 +247,7 @@ impl ColladaDocument {
             .parse()
             .ok()
             .expect("could not parse shininess");
-        // let index_of_refraction: f32 = phong
-        //     .get_child("index_of_refraction", ns)
-        //     .expect("phong is missing index_of_refraction")
-        //     .get_child("float", ns)
-        //     .expect("index_of_refraction is missing float")
-        //     .content_str()
-        //     .as_str()
-        //     .parse()
-        //     .ok()
-        //     .expect("could not parse index_of_refraction");
-
+        
         PhongEffect {
             ambient,
             diffuse,
@@ -604,7 +594,6 @@ impl ColladaDocument {
         let name = (geometry_element.get_attribute("name", None))?;
         let mesh_element = (geometry_element.get_child("mesh", self.get_ns()))?;
         let mesh = (self.get_mesh_elements(mesh_element))?;
-        //let binding_type = (self.get_geometry_binding_type(mesh_element))?;
 
         let mut first_primitive_element = None;
         'find_primitive: for t in [
@@ -937,16 +926,6 @@ impl ColladaDocument {
             .get_attribute("material", None)
             .map(|s| s.to_string())
     }
-
-    //fn get_geometry_binding_type(&self, mesh_element: &xml::Element) -> Option<GeometryBindingType> {
-    //    if mesh_element.get_child(GeometryBindingType::Polylist.name(), self.get_ns()).is_some() {
-    //        return Some(GeometryBindingType::Polylist)
-    //    }
-    //    if mesh_element.get_child(GeometryBindingType::Triangles.name(), self.get_ns()).is_some() {
-    //        return Some(GeometryBindingType::Triangles)
-    //    }
-    //    None
-    //}
 
     fn get_mesh_elements(&self, mesh_element: &xml::Element) -> Option<Vec<PrimitiveElement>> {
         let mut prims = vec![];
